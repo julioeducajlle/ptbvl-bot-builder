@@ -144,28 +144,37 @@ const App: React.FC = () => {
       setMessages(prev => [...prev, assistantMsg]);
 
       if (parsed.action === 'generate') {
-        const genConfig: BotGenerationConfig = {
-          botName: parsed.botName || 'Meu Bot',
-          contractType: parsed.contractType || sidebarConfig.contractType,
-          direction: parsed.direction || 'CALL',
-          digitValue: parsed.digitValue ?? undefined,
-          triggerType: parsed.triggerType || 'always',
-          triggerPattern: parsed.triggerPattern || undefined,
-          triggerDirection: parsed.triggerDirection || undefined,
-          logicNotes: parsed.logicNotes || '',
-          sidebar: sidebarConfig,
-        };
+        const botName = parsed.botName || 'Meu Bot';
 
-        const bot = generateBot(genConfig);
-        setBotJson(bot);
+        // Use botJson from LLM directly if provided (preferred)
+        if (parsed.botJson && typeof parsed.botJson === 'object') {
+          setBotJson(parsed.botJson);
+        } else {
+          // Fallback: use botGenerator
+          const genConfig: BotGenerationConfig = {
+            botName,
+            contractType: parsed.contractType || sidebarConfig.contractType,
+            direction: parsed.direction || 'CALL',
+            digitValue: parsed.digitValue ?? undefined,
+            triggerType: parsed.triggerType || 'always',
+            triggerPattern: parsed.triggerPattern || undefined,
+            triggerDirection: parsed.triggerDirection || undefined,
+            logicNotes: parsed.logicNotes || '',
+            sidebar: sidebarConfig,
+          };
+          const bot = generateBot(genConfig);
+          setBotJson(bot);
+        }
+
         setActiveTab('preview');
 
+        const successMsg = parsed.message || `✅ Bot "${botName}" gerado com sucesso!\n\nVeja o resultado na aba Preview. Você pode exportar como .ptbot ou me pedir modificações.`;
         const genMsg: ChatMessage = {
           id: msgId(),
           role: 'assistant',
           content: JSON.stringify({
             action: 'message',
-            message: `✅ Bot "${genConfig.botName}" gerado com sucesso!\n\nVeja o resultado na aba Preview. Você pode exportar como .ptbot ou me pedir modificações.`
+            message: successMsg,
           }),
           timestamp: Date.now(),
         };
