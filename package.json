@@ -1,8 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "build": "tsc && esbuild app.tsx --bundle --platform=browser --outfile=bundle.js --external:tasklet-bridge",
-    "dev": "tsc && esbuild app.tsx --bundle --platform=browser --outfile=bundle.js --watch --external:tasklet-bridge"
+    "build": "npx esbuild app.tsx --bundle --platform=browser --outfile=bundle.js --external:tasklet-bridge --loader:.ts=ts --loader:.tsx=tsx",
+    "dev": "npx esbuild app.tsx --bundle --platform=browser --outfile=bundle.js --watch --external:tasklet-bridge --loader:.ts=ts --loader:.tsx=tsx"
   },
   "dependencies": {
     "react": "^19.1.0",
