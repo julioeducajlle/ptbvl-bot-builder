@@ -827,3 +827,38 @@ export async function callLLM(
     return { success: false, error: err.message || 'Network error' };
   }
 }
+
+// ===== Parse LLM Response =====
+
+export function parseLLMResponse(content: string): Record<string, any> {
+  if (!content) return { action: 'message', message: '' };
+
+  // Try to parse as JSON directly
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch (_) {
+    // Not JSON, try to extract JSON block
+  }
+
+  // Try to extract JSON from markdown code block
+  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    try {
+      const parsed = JSON.parse(codeBlockMatch[1].trim());
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (_) {}
+  }
+
+  // Try to extract first {...} block from text
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (_) {}
+  }
+
+  // Fallback: treat as plain message
+  return { action: 'message', message: content };
+}
