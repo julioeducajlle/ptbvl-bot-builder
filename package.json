@@ -2,7 +2,8 @@
   "private": true,
   "scripts": {
     "build": "npx esbuild app.tsx --bundle --platform=browser --outfile=bundle.js --external:tasklet-bridge --loader:.ts=ts --loader:.tsx=tsx",
-    "dev": "npx esbuild app.tsx --bundle --platform=browser --outfile=bundle.js --watch --external:tasklet-bridge --loader:.ts=ts --loader:.tsx=tsx"
+    "dev": "npx esbuild app.tsx --bundle --platform=browser --outfile=bundle.js --watch --external:tasklet-bridge --loader:.ts=ts --loader:.tsx=tsx",
+    "generate-index": "python3 scripts/generate_index.py"
   },
   "dependencies": {
     "react": "^19.1.0",

@@ -1,15 +1,22 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": ".",
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/bundle.js",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=3600, s-maxage=3600"
-        }
-      ]
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, s-maxage=3600" }]
+    },
+    {
+      "source": "/bots-index.json",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }]
+    },
+    {
+      "source": "/bots/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
     }
   ]
 }

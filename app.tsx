@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Settings, Plus, FileCode } from 'lucide-react';
 import { LLMConfig, ChatMessage, SidebarConfig, BotGenerationConfig, DEFAULT_SIDEBAR } from './types';
@@ -6,8 +6,10 @@ import { ApiKeyModal } from './components/ApiKeyModal';
 import { Sidebar } from './components/Sidebar';
 import { Chat } from './components/Chat';
 import { BotPreview } from './components/BotPreview';
+import { BotSuggestions } from './components/BotSuggestions';
 import { callLLM, parseLLMResponse } from './utils/llmClient';
 import { generateBot } from './utils/botGenerator';
+import { loadBotLibrary, searchBots, loadBotFile, BotMetadata, BotMatch } from './utils/botLibrary';
 
 type Tab = 'chat' | 'preview';
 
@@ -22,6 +24,22 @@ const App: React.FC = () => {
   const [botJson, setBotJson] = useState<object | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('chat');
 
+  // Bot Library state
+  const [botLibrary, setBotLibrary] = useState<BotMetadata[]>([]);
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<BotMatch[]>([]);
+  const [suggestionTermCount, setSuggestionTermCount] = useState(0);
+
+  // Load bot library on mount
+  useEffect(() => {
+    loadBotLibrary().then(lib => {
+      setBotLibrary(lib);
+      if (lib.length > 0) {
+        console.log(`Bot library loaded: ${lib.length} bots`);
+      }
+    });
+  }, []);
+
   // Generate unique message ID
   const msgId = () => `msg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
@@ -29,25 +47,29 @@ const App: React.FC = () => {
   const handleSaveLlmConfig = useCallback((config: LLMConfig) => {
     setLlmConfig(config);
     setShowApiModal(false);
-    // Send initial greeting if no messages yet
     if (messages.length === 0) {
+      const libraryInfo = botLibrary.length > 0
+        ? `\n\nℹ️ Biblioteca carregada com **${botLibrary.length} bots**. Quando descrever uma estratégia, verifico se já existe algo similar!`
+        : '';
       setMessages([{
         id: msgId(),
         role: 'assistant',
         content: JSON.stringify({
           action: 'message',
-          message: 'Olá! 🤖 Sou o assistente de criação de bots da Ponto Bots. Vejo que você já configurou os parâmetros na sidebar à esquerda.\n\nMe conte: que tipo de estratégia de trading você gostaria de implementar no seu bot?'
+          message: `Olá! 🤖 Sou o assistente de criação de bots da Ponto Bots. Vejo que você já configurou os parâmetros na sidebar à esquerda.\n\nMe conte: que tipo de estratégia de trading você gostaria de implementar no seu bot?${libraryInfo}`
         }),
         timestamp: Date.now(),
       }]);
     }
-  }, [messages.length]);
+  }, [messages.length, botLibrary.length]);
 
   // Handle new bot creation
   const handleNewBot = useCallback(() => {
     setMessages([]);
     setBotJson(null);
     setSidebarConfig(DEFAULT_SIDEBAR);
+    setSuggestions([]);
+    setPendingQuery(null);
     if (llmConfig) {
       setMessages([{
         id: msgId(),
@@ -62,9 +84,12 @@ const App: React.FC = () => {
     setActiveTab('chat');
   }, [llmConfig]);
 
-  // Handle send message
-  const handleSendMessage = useCallback(async (text: string) => {
+  // Core function that actually calls the LLM
+  const processWithLLM = useCallback(async (text: string, extraContext?: string) => {
     if (!llmConfig) return;
+    setIsLoading(true);
+    setSuggestions([]);
+    setPendingQuery(null);
 
     const userMsg: ChatMessage = {
       id: msgId(),
@@ -72,11 +97,26 @@ const App: React.FC = () => {
       content: text,
       timestamp: Date.now(),
     };
-    setMessages(prev => [...prev, userMsg]);
-    setIsLoading(true);
+
+    setMessages(prev => {
+      // Avoid duplicate if already added
+      if (prev.some(m => m.content === text && m.role === 'user')) return prev;
+      return [...prev, userMsg];
+    });
+
+    // Build messages with optional extra context injected as system message
+    const allMessages = [...messages, userMsg];
+    if (extraContext) {
+      allMessages.push({
+        id: msgId(),
+        role: 'system',
+        content: extraContext,
+        timestamp: Date.now(),
+      });
+    }
 
     try {
-      const result = await callLLM(llmConfig, [...messages, userMsg], sidebarConfig);
+      const result = await callLLM(llmConfig, allMessages, sidebarConfig);
 
       if (!result.success) {
         const errorMsg: ChatMessage = {
@@ -95,7 +135,6 @@ const App: React.FC = () => {
       const content = result.content || '';
       const parsed = parseLLMResponse(content);
 
-      // Create assistant message
       const assistantMsg: ChatMessage = {
         id: msgId(),
         role: 'assistant',
@@ -104,7 +143,6 @@ const App: React.FC = () => {
       };
       setMessages(prev => [...prev, assistantMsg]);
 
-      // If action is generate, create the bot
       if (parsed.action === 'generate') {
         const genConfig: BotGenerationConfig = {
           botName: parsed.botName || 'Meu Bot',
@@ -122,7 +160,6 @@ const App: React.FC = () => {
         setBotJson(bot);
         setActiveTab('preview');
 
-        // Add system message about generation
         const genMsg: ChatMessage = {
           id: msgId(),
           role: 'assistant',
@@ -150,11 +187,99 @@ const App: React.FC = () => {
     }
   }, [llmConfig, messages, sidebarConfig]);
 
+  // Handle send message — check library first if library is loaded
+  const handleSendMessage = useCallback(async (text: string) => {
+    if (!llmConfig) return;
+
+    // Add user message to chat immediately
+    const userMsg: ChatMessage = {
+      id: msgId(),
+      role: 'user',
+      content: text,
+      timestamp: Date.now(),
+    };
+    setMessages(prev => [...prev, userMsg]);
+
+    // Check library for matches (only on first or standalone message)
+    if (botLibrary.length > 0) {
+      const terms = text.toLowerCase().split(/\s+/).filter(t => t.length >= 3);
+      const matches = searchBots(text, botLibrary, 3);
+
+      if (matches.length > 0) {
+        // Show suggestions and pause — don't call LLM yet
+        setSuggestions(matches);
+        setSuggestionTermCount(terms.length);
+        setPendingQuery(text);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    // No matches — proceed directly to LLM
+    await processWithLLM(text);
+  }, [llmConfig, botLibrary, processWithLLM]);
+
+  // User chose to use an existing bot directly
+  const handleUseSuggestedBot = useCallback(async (match: BotMatch) => {
+    setSuggestions([]);
+    setPendingQuery(null);
+    setIsLoading(true);
+
+    try {
+      const botData = await loadBotFile(match.filename);
+      setBotJson(botData);
+      setActiveTab('preview');
+
+      const msg: ChatMessage = {
+        id: msgId(),
+        role: 'assistant',
+        content: JSON.stringify({
+          action: 'message',
+          message: `✅ Bot **"${match.name}"** carregado da biblioteca!\n\nVeja na aba Preview. Me diga se quer fazer alguma modificação.`
+        }),
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, msg]);
+    } catch (err) {
+      const msg: ChatMessage = {
+        id: msgId(),
+        role: 'assistant',
+        content: JSON.stringify({
+          action: 'message',
+          message: `⚠️ Não foi possível carregar o bot: ${String(err)}`
+        }),
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, msg]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // User chose to use a bot as a base/template
+  const handleUseAsBase = useCallback(async (match: BotMatch) => {
+    setSuggestions([]);
+    const query = pendingQuery || '';
+    setPendingQuery(null);
+
+    const extraContext = `O usuário quer um bot baseado em "${match.name}" (${match.contractTypes.join(', ')}). Use esta estratégia como base e adapte conforme o pedido do usuário. Bot de referência: ${match.filename}`;
+
+    await processWithLLM(query, extraContext);
+  }, [pendingQuery, processWithLLM]);
+
+  // User chose to ignore suggestions and create from scratch
+  const handleCreateNew = useCallback(async () => {
+    const query = pendingQuery || '';
+    setSuggestions([]);
+    setPendingQuery(null);
+
+    await processWithLLM(query);
+  }, [pendingQuery, processWithLLM]);
+
   // Handle import
   const handleImport = useCallback((json: object) => {
     setBotJson(json);
     setActiveTab('preview');
-    // Add message about import
     const importMsg: ChatMessage = {
       id: msgId(),
       role: 'assistant',
@@ -176,6 +301,11 @@ const App: React.FC = () => {
           <button className="btn btn-ghost btn-xs gap-1" onClick={handleNewBot}>
             <Plus size={12} /> Novo Bot
           </button>
+          {botLibrary.length > 0 && (
+            <span className="badge badge-xs badge-ghost" title="Bots na biblioteca">
+              📚 {botLibrary.length}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           {llmConfig && (
@@ -229,15 +359,32 @@ const App: React.FC = () => {
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {activeTab === 'chat' ? (
-              <Chat
-                messages={messages}
-                onSendMessage={handleSendMessage}
-                isLoading={isLoading}
-                hasApiKey={!!llmConfig}
-                onOpenSettings={() => setShowApiModal(true)}
-              />
+              <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <Chat
+                    messages={messages}
+                    onSendMessage={handleSendMessage}
+                    isLoading={isLoading}
+                    hasApiKey={!!llmConfig}
+                    onOpenSettings={() => setShowApiModal(true)}
+                  />
+                </div>
+                {/* Suggestions panel — shown above input area when there are matches */}
+                {suggestions.length > 0 && (
+                  <div className="shrink-0 border-t border-base-300 p-2 bg-base-50 overflow-y-auto max-h-80">
+                    <BotSuggestions
+                      matches={suggestions}
+                      queryTermCount={suggestionTermCount}
+                      onUseBot={handleUseSuggestedBot}
+                      onUseAsBase={handleUseAsBase}
+                      onCreateNew={handleCreateNew}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                )}
+              </div>
             ) : (
               <BotPreview
                 botJson={botJson}
