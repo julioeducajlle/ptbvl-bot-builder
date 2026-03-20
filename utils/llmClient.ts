@@ -128,6 +128,15 @@ function buildSidebarContext(sidebar: SidebarConfig): string {
 `;
 }
 
+// Direct API URLs per provider
+const API_URLS: Record<string, string> = {
+  openai: 'https://api.openai.com/v1/chat/completions',
+  deepseek: 'https://api.deepseek.com/v1/chat/completions',
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+  anthropic: 'https://api.anthropic.com/v1/messages',
+};
+
 export async function callLLM(
   llmConfig: LLMConfig,
   messages: ChatMessage[],
@@ -135,46 +144,80 @@ export async function callLLM(
 ): Promise<{ success: boolean; content?: string; error?: string }> {
   const sidebarCtx = buildSidebarContext(sidebar);
 
-  // Build messages for LLM
   const llmMessages = [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'user', content: `[CONTEXTO DO SISTEMA] ${sidebarCtx}\n\nResponda sempre em JSON válido.` },
     { role: 'assistant', content: '{"action": "message", "message": "Olá! 🤖 Sou o assistente de criação de bots da Ponto Bots. Vejo que você já configurou os parâmetros na sidebar. Me conte: que tipo de estratégia de trading você gostaria de implementar no seu bot?"}' },
     ...messages
       .filter(m => m.role !== 'system')
-      .map(m => ({
-        role: m.role as string,
-        content: m.content,
-      })),
+      .map(m => ({ role: m.role as string, content: m.content })),
   ];
 
-  const request = {
-    provider: llmConfig.provider,
-    api_key: llmConfig.apiKey,
-    model: llmConfig.model,
-    messages: llmMessages,
-  };
-
-  // Write request to temp file
-  await window.tasklet.writeFileToDisk(
-    '/tmp/ptbvl_llm_request.json',
-    JSON.stringify(request)
-  );
-
-  // Execute Python script
-  const result = await window.tasklet.runCommand(
-    'python3 /agent/home/ptbvl_llm.py',
-    120
-  );
-
-  // Read response
   try {
-    const responseText = await window.tasklet.readFileFromDisk('/tmp/ptbvl_llm_response.json');
-    const response = JSON.parse(responseText);
-    return response;
+    let content: string;
+
+    // ── Anthropic (different API format) ─────────────────────────────────────
+    if (llmConfig.provider === 'anthropic') {
+      const systemContent = llmMessages.find(m => m.role === 'system')?.content || '';
+      const userMessages = llmMessages.filter(m => m.role !== 'system');
+
+      const response = await fetch(API_URLS.anthropic, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': llmConfig.apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: llmConfig.model,
+          max_tokens: 1024,
+          temperature: 0.3,
+          system: systemContent,
+          messages: userMessages,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error?.message || `Erro HTTP ${response.status}` };
+      }
+      content = data.content?.[0]?.text ?? '';
+
+    // ── OpenAI-compatible (OpenAI, DeepSeek, OpenRouter, Gemini) ─────────────
+    } else {
+      const url = API_URLS[llmConfig.provider];
+      if (!url) {
+        return { success: false, error: `Provedor não suportado: ${llmConfig.provider}` };
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${llmConfig.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: llmConfig.model,
+          messages: llmMessages,
+          temperature: 0.3,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error?.message || `Erro HTTP ${response.status}` };
+      }
+      content = data.choices?.[0]?.message?.content ?? '';
+    }
+
+    if (!content) {
+      return { success: false, error: 'Resposta vazia do provedor de IA.' };
+    }
+    return { success: true, content };
+
   } catch (e) {
-    console.error('Failed to parse LLM response:', e, 'stdout:', result);
-    return { success: false, error: `Erro ao processar resposta: ${String(e)}` };
+    return { success: false, error: `Erro de conexão: ${String(e)}` };
   }
 }
 
