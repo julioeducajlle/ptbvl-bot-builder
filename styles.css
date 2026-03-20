@@ -1,0 +1,45 @@
+/* Ponto Bots AI Builder - Custom Styles */
+
+/* Smooth scrollbar for sidebar and chat */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--bc) / 0.15);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--bc) / 0.25);
+}
+
+/* Chat message animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.flex.gap-2.justify-start,
+.flex.gap-2.justify-end {
+  animation: fadeInUp 0.2s ease-out;
+}
+
+/* Compact form controls */
+.form-control .label {
+  padding-bottom: 2px;
+  padding-top: 2px;
+}
+
+/* JSON preview monospace */
+pre {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  tab-size: 2;
+}
