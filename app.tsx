@@ -135,13 +135,17 @@ const App: React.FC = () => {
       const content = result.content || '';
       const parsed = parseLLMResponse(content);
 
-      const assistantMsg: ChatMessage = {
-        id: msgId(),
-        role: 'assistant',
-        content: typeof content === 'string' ? content : JSON.stringify(content),
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
+      // Only add raw assistantMsg for non-generate actions
+      // (generate action adds its own genMsg below to avoid duplication)
+      if (parsed.action !== 'generate') {
+        const assistantMsg: ChatMessage = {
+          id: msgId(),
+          role: 'assistant',
+          content: typeof content === 'string' ? content : JSON.stringify(content),
+          timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+      }
 
       if (parsed.action === 'generate') {
         const botName = parsed.botName || 'Meu Bot';
