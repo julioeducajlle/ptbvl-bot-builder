@@ -668,28 +668,133 @@ SEMPRE responda em JSON válido. NUNCA inclua texto fora do JSON.
 Para perguntas/mensagens:
 {"action": "message", "message": "Sua mensagem aqui"}
 
-Para gerar o bot (JSON COMPLETO obrigatório):
+Para gerar o bot (JSON COMPLETO obrigatório), aqui está um EXEMPLO REAL COMPLETO de bot DIGITDIFF com martingale automático:
+
 {
   "action": "generate",
-  "botName": "Nome Descritivo do Bot",
-  "message": "Mensagem explicando o que foi criado",
+  "botName": "Bot Digit Differs Martingale",
+  "message": "Bot criado com sucesso! Compra DIGITDIFF sempre, com martingale automático.",
   "botJson": {
     "blocks": {
       "languageVersion": 0,
       "blocks": [
-        { "type": "runonceatstart", "id": "RLoGFD/l:WR[I^uo*+k3", "x": 0, "y": 0, "inputs": { "statement_runonceatstart": { "block": { ... } } } },
-        { "type": "purchaseconditions", "id": "|!|d5xn:=b08sQWUU0Av", "x": 0, "y": 600, "inputs": { "statement_purchaseconditions": { "block": { ... } } } },
-        { "type": "restarttradingconditions", "id": "A)}IH]$#NmR6#$VO9}l:", "x": 0, "y": 1200, "inputs": { "statement_restarttradingconditions": { "block": { ... } } } }
+        {
+          "type": "runonceatstart",
+          "id": "RLoGFD/l:WR[I^uo*+k3",
+          "x": 0, "y": 0,
+          "inputs": {
+            "statement_runonceatstart": {
+              "block": {
+                "type": "settarget",
+                "id": "b_001",
+                "fields": {
+                  "check_targetprofit_nya": true,
+                  "check_stoploss_nya": true,
+                  "check_numberofwins_nya": false,
+                  "check_numberoflosses_nya": false,
+                  "check_numberofruns_nya": false,
+                  "check_numberofwinsinarow": false,
+                  "check_numberoflossesinarow_nya": false
+                },
+                "inputs": {
+                  "targetprofit_nya": {"shadow": {"type": "math_number", "id": "b_002", "fields": {"NUM": 10}}},
+                  "stoploss_nya": {"shadow": {"type": "math_number", "id": "b_003", "fields": {"NUM": 100}}},
+                  "numberofwins_nya": {"shadow": {"type": "math_number", "id": "b_004", "fields": {"NUM": 10}}},
+                  "numberoflosses_nya": {"shadow": {"type": "math_number", "id": "b_005", "fields": {"NUM": 10}}},
+                  "numberofruns_nya": {"shadow": {"type": "math_number", "id": "b_006", "fields": {"NUM": 100}}},
+                  "numberofwinsinarow_nya": {"shadow": {"type": "math_number", "id": "b_007", "fields": {"NUM": 10}}},
+                  "numberoflossesinarow_nya": {"shadow": {"type": "math_number", "id": "b_008", "fields": {"NUM": 10}}}
+                },
+                "next": {
+                  "block": {
+                    "type": "setmoneymanagementtosmartmartingale",
+                    "id": "b_009",
+                    "fields": {"check_smart_nya": false},
+                    "inputs": {
+                      "initialstake_nya": {"shadow": {"type": "math_number", "id": "b_010", "fields": {"NUM": 0.35}}},
+                      "martingalefactor_nya": {"shadow": {"type": "math_number", "id": "b_011", "fields": {"NUM": 2.2}}}
+                    },
+                    "next": {
+                      "block": {
+                        "type": "setvirtuallose",
+                        "id": "b_012",
+                        "fields": {"check_virtuallose_nya": false},
+                        "inputs": {"virtuallose_nya": {"shadow": {"type": "math_number", "id": "b_013", "fields": {"NUM": 2}}}},
+                        "next": {
+                          "block": {
+                            "type": "setmarket",
+                            "id": "b_014",
+                            "fields": {"market_nya": "R_100|Volatility 100 Index"},
+                            "next": {
+                              "block": {
+                                "type": "readyfortrade",
+                                "id": "/S?3[Ux8c2wQ.UR3dBEo"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "purchaseconditions",
+          "id": "|!|d5xn:=b08sQWUU0Av",
+          "x": 0, "y": 600,
+          "inputs": {
+            "statement_purchaseconditions": {
+              "block": {
+                "type": "purchase_diff_match",
+                "id": "b_020",
+                "fields": {
+                  "selcontract_nya": "DIGITDIFF",
+                  "account_nya": "master",
+                  "market_nya": "activemarket",
+                  "stakeAM_nya": "auto"
+                },
+                "inputs": {
+                  "stake_nya": {"shadow": {"type": "math_number", "id": "b_021", "fields": {"NUM": 0.35}}},
+                  "inpduration_nya": {"shadow": {"type": "math_number", "id": "b_022", "fields": {"NUM": 5}}},
+                  "ldp_nya": {"shadow": {"type": "math_number", "id": "b_023", "fields": {"NUM": 0}}}
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "restarttradingconditions",
+          "id": "A)}IH]$#NmR6#$VO9}l:",
+          "x": 0, "y": 1200,
+          "inputs": {
+            "statement_restarttradingconditions": {
+              "block": {
+                "type": "tradeagain",
+                "id": "b_030"
+              }
+            }
+          }
+        }
       ]
     },
-    "variables": [
-      {"name": "nomeDaVariavel", "id": "v_001"}
-    ]
+    "variables": []
   }
 }
 
-IMPORTANTE: O botJson deve conter um bot FUNCIONAL e COMPLETO. Não omita partes do JSON.
-Use os valores da sidebar (fornecidos no contexto) para stake, duração, mercados, etc.`;
+REGRAS CRÍTICAS PARA GERAÇÃO:
+- SEMPRE inclua os 3 blocos raiz: runonceatstart, purchaseconditions, restarttradingconditions
+- NUNCA use "..." ou placeholders — escreva o JSON completo
+- runonceatstart DEVE conter: settarget → setmoneymanagement → setvirtuallose → setmarket → readyfortrade (nessa ordem via "next")
+- settarget DEVE ter pelo menos check_targetprofit_nya:true ou check_stoploss_nya:true
+- purchaseconditions DEVE conter o bloco de compra correto para o contrato
+- restarttradingconditions DEVE terminar com tradeagain (ou ter tradeagain no "next" do último if)
+- Para martingale MANUAL: adicione variables_set na runonceatstart (inicializar v_stake, v_fator) e use stakeAM_nya:"manual"
+- Para bot INTERMERCADOS: substitua purchaseconditions por purchaseconditions_continuousindices e adicione setactive_continuousindices na runonceatstart antes do setmarket
+
+Use os valores da sidebar (fornecidos no contexto) para stake, duração, mercados, settarget, etc.\`;`
 
 function buildSidebarContext(sidebar: SidebarConfig): string {
   const marketList = sidebar.markets.length > 0 ? sidebar.markets.join(', ') : 'Nenhum selecionado';

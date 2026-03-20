@@ -3,7 +3,7 @@
 import { ValidationResult, CONTRACT_TYPES } from '../types';
 
 const REQUIRED_TOP_BLOCKS = ['runonceatstart'];
-const IMPORTANT_TOP_BLOCKS = ['restarttradingconditions', 'purchaseconditions_continuousindices'];
+const IMPORTANT_TOP_BLOCKS = ['restarttradingconditions'];
 
 // Build a set of all valid contract directions from all 17 types
 const VALID_CONTRACT_DIRECTIONS = CONTRACT_TYPES.flatMap(ct => ct.directions.map(d => d.value));
@@ -64,6 +64,19 @@ export function validateBot(ptbot: any): ValidationResult {
     if (!topTypes.includes(imp)) {
       warnings.push(`Bloco importante "${imp}" não encontrado. O bot pode não funcionar corretamente.`);
     }
+  }
+
+  // 2b. Check purchaseconditions vs purchaseconditions_continuousindices consistency
+  const allBlocksFlat = ptbot.blocks.blocks.flatMap((b: any) => findAllBlocks(b));
+  const hasMultiMarket = allBlocksFlat.some((b: any) => b.type === 'setactive_continuousindices');
+  const hasPurchaseCI = topTypes.includes('purchaseconditions_continuousindices');
+  const hasPurchaseSingle = topTypes.includes('purchaseconditions');
+
+  if (hasMultiMarket && !hasPurchaseCI) {
+    warnings.push('Bot usa intermercados (setactive_continuousindices) mas não tem "purchaseconditions_continuousindices". Use este bloco em vez de purchaseconditions para bots intermercados.');
+  }
+  if (!hasMultiMarket && !hasPurchaseSingle && !hasPurchaseCI) {
+    errors.push('Bloco "purchaseconditions" não encontrado. O bot precisa de um bloco de condições de compra.');
   }
 
   // 3. Check for purchase blocks
