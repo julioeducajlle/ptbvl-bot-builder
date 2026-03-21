@@ -619,7 +619,7 @@
   },
   {
     "filename": "hedging_endsbetweenendsoutsideezwithdigittrigger_202402132205.ptbot",
-    "name": "\"HEDGING ENDS BETWEEN ENDS OUTSIDE EZ WITH DIGIT TRIGGER\" | Find more robots at ",
+    "name": "\"HEDGING ENDS BETWEEN ENDS OUTSIDE EZ WITH DIGIT TRIGGER\" | Find more robots at https://pontobots.com",
     "description": "\"HEDGING ENDS BETWEEN ENDS OUTSIDE EZ WITH DIGIT TRIGGER\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached.",
     "contractTypes": [],
     "markets": [
@@ -649,7 +649,7 @@
   },
   {
     "filename": "hedging_higherlowerezwithdigittrigger_202402061054.ptbot",
-    "name": "\"HEDGING HIGHER LOWER EZ WITH DIGIT TRIGGER\" | Find more robots at https://block",
+    "name": "\"HEDGING HIGHER LOWER EZ WITH DIGIT TRIGGER\" | Find more robots at https://pontobots.com",
     "description": "\"HEDGING HIGHER LOWER EZ WITH DIGIT TRIGGER\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached.",
     "contractTypes": [
       "higher_lower"
@@ -751,7 +751,7 @@
   },
   {
     "filename": "hedging_over5under4withflextrigger_202402021633.ptbot",
-    "name": "\"HEDGING OVER 5 UNDER 4 WITH FLEX TRIGGER\" | Find more robots at https://block.e",
+    "name": "\"HEDGING OVER 5 UNDER 4 WITH FLEX TRIGGER\" | Find more robots at https://pontobots.com",
     "description": "\"HEDGING OVER 5 UNDER 4 WITH FLEX TRIGGER\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached.",
     "contractTypes": [],
     "markets": [
@@ -858,7 +858,7 @@
   },
   {
     "filename": "hedging_staysbetweengoesoutsideezwithdigittrigger_202402132146.ptbot",
-    "name": "\"HEDGING STAYS BETWEEN GOES OUTSIDE EZ WITH DIGIT TRIGGER\" | Find more robots at",
+    "name": "\"HEDGING STAYS BETWEEN GOES OUTSIDE EZ WITH DIGIT TRIGGER\" | Find more robots at https://pontobots.com",
     "description": "\"HEDGING STAYS BETWEEN GOES OUTSIDE EZ WITH DIGIT TRIGGER\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached.",
     "contractTypes": [],
     "markets": [
@@ -1029,7 +1029,7 @@
   },
   {
     "filename": "multimarketsequence_evenoddpercentage_202409181904.ptbot",
-    "name": "\"MULTI MARKET SEQUENCE EVEN ODD PERCENTAGE\" | Find more robots at https://block.",
+    "name": "\"MULTI MARKET SEQUENCE EVEN ODD PERCENTAGE\" | Find more robots at https://pontobots.com",
     "description": "\"MULTI MARKET SEQUENCE EVEN ODD PERCENTAGE\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached. | Bot Stop. Max Marti Level Reached.",
     "contractTypes": [
       "even_odd"
@@ -1738,7 +1738,7 @@
   },
   {
     "filename": "sequencediffer_cyclepredictionwithtriggereov2_202403062200.ptbot",
-    "name": "\"SEQUENCE DIFFER CYCLE PREDICTION WITH TRIGGER EO V2\" | Find more robots at http",
+    "name": "\"SEQUENCE DIFFER CYCLE PREDICTION WITH TRIGGER EO V2\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE DIFFER CYCLE PREDICTION WITH TRIGGER EO V2\" | Find more robots at https://pontobots.com | Bot Stop. Max Marti Level Reached. | Congratulation. Target Profit Reached.",
     "contractTypes": [],
     "markets": [
@@ -1760,7 +1760,7 @@
   },
   {
     "filename": "sequencediffer_cyclepredictionwithtriggereo_202403062149.ptbot",
-    "name": "\"SEQUENCE DIFFER CYCLE PREDICTION WITH TRIGGER EO\" | Find more robots at https:/",
+    "name": "\"SEQUENCE DIFFER CYCLE PREDICTION WITH TRIGGER EO\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE DIFFER CYCLE PREDICTION WITH TRIGGER EO\" | Find more robots at https://pontobots.com | Bot Stop. Max Marti Level Reached. | Congratulation. Target Profit Reached.",
     "contractTypes": [],
     "markets": [
@@ -1804,7 +1804,7 @@
   },
   {
     "filename": "sequence_doublezigzagevenoddwithxtriggereo_202403191602.ptbot",
-    "name": "\"SEQUENCE DOUBLE ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https",
+    "name": "\"SEQUENCE DOUBLE ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE DOUBLE ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https://pontobots.com | Bot Stop. Max Marti Level Reached. | Congratulation. Target Profit Reached.",
     "contractTypes": [
       "even_odd"
@@ -1856,7 +1856,7 @@
   },
   {
     "filename": "sequenceeven_withtriggereomultimarket_202403131418.ptbot",
-    "name": "\"SEQUENCE EVEN WITH TRIGGER EO MULTI MARKET\" | Find more robots at https://block",
+    "name": "\"SEQUENCE EVEN WITH TRIGGER EO MULTI MARKET\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE EVEN WITH TRIGGER EO MULTI MARKET\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached. | Bot Stop. Max Marti Level Reached.",
     "contractTypes": [
       "even_odd"
@@ -1908,7 +1908,7 @@
   },
   {
     "filename": "sequencefall_withtriggerrfmultimarket_202403211629.ptbot",
-    "name": "\"SEQUENCE FALL WITH TRIGGER RF MULTI MARKET\" | Find more robots at https://block",
+    "name": "\"SEQUENCE FALL WITH TRIGGER RF MULTI MARKET\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE FALL WITH TRIGGER RF MULTI MARKET\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached. | Bot Stop. Max Marti Level Reached.",
     "contractTypes": [
       "rise_fall"
@@ -2109,7 +2109,7 @@
   },
   {
     "filename": "sequenceodd_withtriggereomultimarket_202403140826.ptbot",
-    "name": "\"SEQUENCE ODD WITH TRIGGER EO MULTI MARKET\" | Find more robots at https://block.",
+    "name": "\"SEQUENCE ODD WITH TRIGGER EO MULTI MARKET\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE ODD WITH TRIGGER EO MULTI MARKET\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached. | Bot Stop. Max Marti Level Reached.",
     "contractTypes": [
       "even_odd"
@@ -2184,7 +2184,7 @@
   },
   {
     "filename": "sequencerise_withtriggerrfmultimarket_202403211614.ptbot",
-    "name": "\"SEQUENCE RISE WITH TRIGGER RF MULTI MARKET\" | Find more robots at https://block",
+    "name": "\"SEQUENCE RISE WITH TRIGGER RF MULTI MARKET\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE RISE WITH TRIGGER RF MULTI MARKET\" | Find more robots at https://pontobots.com | Congratulation. Target Profit Reached. | Bot Stop. Max Marti Level Reached.",
     "contractTypes": [
       "rise_fall"
@@ -2321,7 +2321,7 @@
   },
   {
     "filename": "sequence_yzigzagevenoddwithxtriggereo_202403271909.ptbot",
-    "name": "\"SEQUENCE Y ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https://bl",
+    "name": "\"SEQUENCE Y ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE Y ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https://pontobots.com | Bot Stop. Max Marti Level Reached. | Congratulation. Target Profit Reached.",
     "contractTypes": [
       "even_odd"
@@ -2393,7 +2393,7 @@
   },
   {
     "filename": "sequence_zigzagevenoddwithxtriggereo_202403110001.ptbot",
-    "name": "\"SEQUENCE ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https://bloc",
+    "name": "\"SEQUENCE ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https://pontobots.com",
     "description": "\"SEQUENCE ZIG-ZAG EVEN ODD WITH X-TRIGGER EO\" | Find more robots at https://pontobots.com | Bot Stop. Max Marti Level Reached. | Congratulation. Target Profit Reached.",
     "contractTypes": [
       "even_odd"
