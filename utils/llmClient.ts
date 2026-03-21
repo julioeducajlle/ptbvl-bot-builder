@@ -882,7 +882,7 @@ export async function callLLM(
         },
         body: JSON.stringify({
           model: llmConfig.model,
-          max_tokens: 8192,
+          max_tokens: 16384,
           system: systemWithContext,
           messages: llmMessages,
         }),
@@ -916,7 +916,7 @@ export async function callLLM(
             ...llmMessages,
           ],
           temperature: 0.3,
-          max_tokens: 8192,
+          max_tokens: 16384,
           response_format: { type: 'json_object' },
         }),
       });
@@ -964,6 +964,23 @@ export function parseLLMResponse(content: string): Record<string, any> {
     } catch (_) {}
   }
 
-  // Fallback: treat as plain message
+  // Try to extract key fields via regex from potentially truncated JSON
+  // This handles cases where botJson is huge and the response gets cut off mid-JSON
+  const actionMatch = content.match(/"action"\s*:\s*"([^"]+)"/);
+  const messageMatch = content.match(/"message"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  const botNameMatch = content.match(/"botName"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+
+  if (actionMatch) {
+    return {
+      action: actionMatch[1],
+      message: messageMatch
+        ? messageMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+        : '',
+      botName: botNameMatch?.[1] || undefined,
+      // botJson will be undefined here — app.tsx will use botGenerator as fallback
+    };
+  }
+
+  // Final fallback: treat as plain message
   return { action: 'message', message: content };
 }
