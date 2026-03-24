@@ -31,18 +31,18 @@ CONTRACT_TYPE_MAP = {
 }
 
 CONTRACT_LABELS = {
-    "diff_match": "Digit Difere/Igual",
-    "over_under": "Digit Acima/Abaixo",
-    "even_odd": "Digit Par/Ímpar",
-    "rise_fall": "Sobe/Desce",
-    "higher_lower": "Maior/Menor",
-    "touch_notouch": "Toca/Não Toca",
-    "endsbetween_endsoutside": "Termina Entre/Fora",
-    "staysbetween_goesoutside": "Fica Entre/Vai Fora",
-    "asianup_asiandown": "Asian Sobe/Desce",
+    "diff_match": "Digit Differ/Match",
+    "over_under": "Digit Over/Under",
+    "even_odd": "Digit Even/Odd",
+    "rise_fall": "Rise/Fall",
+    "higher_lower": "Higher/Lower",
+    "touch_notouch": "Touch/No Touch",
+    "endsbetween_endsoutside": "Ends Between/Ends Outside",
+    "staysbetween_goesoutside": "Stays Between/Goes Outside",
+    "asianup_asiandown": "Asian Up/Down",
     "highclose_closelow_highlow": "High-Close/Close-Low/High-Low",
     "hightick_lowtick": "High Tick/Low Tick",
-    "accumulatorup": "Acumulador",
+    "accumulatorup": "Accumulator",
     "resetcall_resetput": "Reset Call/Put",
     "onlyups_onlydowns": "Only Ups/Downs",
     "vanillalongcall_vanillalongput": "Vanilla Long Call/Put",
@@ -51,16 +51,17 @@ CONTRACT_LABELS = {
 }
 
 STRATEGY_KEYWORDS = {
-    "martingale": ["martingale", "multiplicador", "dobrar", "dobrando"],
+    "martingale": ["martingale", "multiplicador", "dobrar", "dobrando", "multiplica", "dobra"],
     "pattern": ["padrão", "gatilho", "sequência", "sequencia", "pattern"],
-    "soros": ["soros", "soros system"],
-    "tick": ["tick", "ticks"],
+    "soros": ["soros", "soros system", "mão de soros"],
+    "tick": ["tick", "ticks", "tique", "tique taque"],
     "digit": ["digit", "dígito", "numero", "número"],
+    "last_digit": ["last digit", "último dígito", "ultimo numero", "último número"],
     "trend": ["tendência", "tendencia", "trend", "sobe", "desce", "rise", "fall"],
     "over_under": ["acima", "abaixo", "over", "under"],
     "even_odd": ["par", "ímpar", "impar", "even", "odd"],
-    "multi_market": ["multi", "mercado", "mercados", "multimarket"],
-    "virtual_loss": ["virtual", "vl", "perda virtual"],
+    "multi_market": ["multi", "mercado", "mercados", "multimarket", "intermercados", "inter mercados", "multi mercados"],
+    "virtual_loss": ["virtual", "vl", "perda virtual", "virtual loss", "loss virtual"],
 }
 
 def extract_text_from_blocks(blocks_data):
