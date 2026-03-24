@@ -1,16 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User, Sparkles } from 'lucide-react';
+import { Send, Loader2, Bot, User, Sparkles, Brain } from 'lucide-react';
 import { ChatMessage } from '../types';
 
 interface ChatProps {
   messages: ChatMessage[];
   onSendMessage: (message: string) => void;
   isLoading: boolean;
+  thinkingStep?: string;
   hasApiKey: boolean;
   onOpenSettings: () => void;
 }
 
-export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isLoading, hasApiKey, onOpenSettings }) => {
+export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isLoading, thinkingStep, hasApiKey, onOpenSettings }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -84,11 +85,31 @@ export const Chat: React.FC<ChatProps> = ({ messages, onSendMessage, isLoading, 
 
         {isLoading && (
           <div className="flex gap-2 justify-start">
-            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
               <Bot size={14} className="text-primary-content" />
             </div>
-            <div className="bg-base-300 rounded-xl px-3 py-2">
-              <Loader2 size={16} className="animate-spin text-base-content/60" />
+            <div className="bg-base-300 rounded-xl px-3 py-2.5 max-w-[85%] min-w-[200px]">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Brain size={12} className="text-primary animate-pulse" />
+                <span className="text-xs font-semibold text-primary">IA trabalhando...</span>
+                <Loader2 size={11} className="animate-spin text-base-content/50 ml-auto" />
+              </div>
+              <div
+                key={thinkingStep}
+                className="text-xs text-base-content/75 leading-relaxed"
+                style={{ animation: 'fadeInStep 0.4s ease-in-out' }}
+              >
+                {thinkingStep || '🤔 Analisando sua solicitação...'}
+              </div>
+              <div className="mt-2 flex gap-0.5">
+                {[0,1,2,3,4,5,6,7].map(i => (
+                  <div
+                    key={i}
+                    className="flex-1 h-0.5 rounded-full bg-primary/30"
+                    style={{ animation: `loadingBar 1.6s ease-in-out ${i * 0.2}s infinite` }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )}

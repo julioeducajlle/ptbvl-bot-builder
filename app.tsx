@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Settings, Plus, FileCode } from 'lucide-react';
 import { LLMConfig, ChatMessage, SidebarConfig, BotGenerationConfig, DEFAULT_SIDEBAR } from './types';
@@ -21,6 +21,8 @@ const App: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [thinkingStep, setThinkingStep] = useState<string>('');
+  const thinkingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [botJson, setBotJson] = useState<object | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('chat');
 
@@ -29,6 +31,36 @@ const App: React.FC = () => {
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<BotMatch[]>([]);
   const [suggestionTermCount, setSuggestionTermCount] = useState(0);
+
+  // Thinking steps animation while LLM is processing
+  useEffect(() => {
+    const steps = [
+      '🤔 Analisando sua solicitação...',
+      '📚 Consultando padrões da plataforma...',
+      '⚙️ Planejando a estrutura do bot...',
+      '🔧 Gerando os blocos Blockly...',
+      '📝 Configurando lógica de compra e reinício...',
+      '🔄 Validando IDs e variáveis...',
+      '✨ Finalizando o bot...',
+    ];
+    if (isLoading) {
+      let idx = 0;
+      setThinkingStep(steps[0]);
+      thinkingIntervalRef.current = setInterval(() => {
+        idx = (idx + 1) % steps.length;
+        setThinkingStep(steps[idx]);
+      }, 2200);
+    } else {
+      if (thinkingIntervalRef.current) {
+        clearInterval(thinkingIntervalRef.current);
+        thinkingIntervalRef.current = null;
+      }
+      setThinkingStep('');
+    }
+    return () => {
+      if (thinkingIntervalRef.current) clearInterval(thinkingIntervalRef.current);
+    };
+  }, [isLoading]);
 
   // Load bot library on mount
   useEffect(() => {
@@ -385,6 +417,7 @@ const App: React.FC = () => {
                     messages={messages}
                     onSendMessage={handleSendMessage}
                     isLoading={isLoading}
+                    thinkingStep={thinkingStep}
                     hasApiKey={!!llmConfig}
                     onOpenSettings={() => setShowApiModal(true)}
                   />
