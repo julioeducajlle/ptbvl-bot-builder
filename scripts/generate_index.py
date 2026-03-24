@@ -11,23 +11,23 @@ BOTS_DIR = ROOT / "bots"
 OUTPUT = ROOT / "bots-index.json"
 
 CONTRACT_TYPE_MAP = {
-    "purchase_digit_diff": "diff_match",
-    "purchase_digit_over_under": "over_under",
+    "purchase_diff_match": "diff_match",
+    "purchase_over_under": "over_under",
     "purchase_even_odd": "even_odd",
     "purchase_rise_fall": "rise_fall",
     "purchase_higher_lower": "higher_lower",
     "purchase_touch_notouch": "touch_notouch",
-    "purchase_ends_between_outside": "endsbetween_endsoutside",
-    "purchase_stays_between_goes_outside": "staysbetween_goesoutside",
-    "purchase_asian": "asianup_asiandown",
-    "purchase_high_close_low": "highclose_closelow_highlow",
-    "purchase_high_low_tick": "hightick_lowtick",
-    "purchase_accumulator": "accumulatorup",
-    "purchase_reset": "resetcall_resetput",
-    "purchase_only_ups_downs": "onlyups_onlydowns",
-    "purchase_vanilla": "vanillalongcall_vanillalongput",
-    "purchase_multiply": "multiplyup_multiplydown",
-    "purchase_turbos": "turboslong_turbosshort",
+    "purchase_endsbetween_endsoutside": "endsbetween_endsoutside",
+    "purchase_staysbetween_goesoutside": "staysbetween_goesoutside",
+    "purchase_asianup_asiandown": "asianup_asiandown",
+    "purchase_highclose_closelow_highlow": "highclose_closelow_highlow",
+    "purchase_hightick_lowtick": "hightick_lowtick",
+    "purchase_accumulatorup": "accumulatorup",
+    "purchase_resetcall_resetput": "resetcall_resetput",
+    "purchase_onlyups_onlydowns": "onlyups_onlydowns",
+    "purchase_vanillalongcall_vanillalongput": "vanillalongcall_vanillalongput",
+    "purchase_multiplyup_multiplydown": "multiplyup_multiplydown",
+    "purchase_turboslong_turbosshort": "turboslong_turbosshort",
 }
 
 CONTRACT_LABELS = {
