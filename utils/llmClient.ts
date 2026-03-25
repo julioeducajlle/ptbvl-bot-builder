@@ -639,7 +639,7 @@ REGRAS IMPORTANTES DE GERAÇÃO
 7. Ao usar AM automático (martingale/fixo): stakeAM_nya: "auto" e o stake_nya é ignorado
 8. NUNCA gere IDs duplicados no mesmo bot
 9. Variables array: liste TODAS as variáveis com name e id únicos
-10. Os valores de "shadow" são fallbacks visuais — coloque o valor real em "block" dentro do input
+10. Os valores de "shadow" são fallbacks — coloque o valor real em "block" dentro do input
 
 ================================================================================
 SIDEBAR CONFIG (já preenchida pelo usuário — NÃO pergunte sobre estes)
