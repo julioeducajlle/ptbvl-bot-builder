@@ -40,8 +40,7 @@ const App: React.FC = () => {
       '⚙️ Planejando a estrutura do bot...',
       '🔧 Gerando os blocos Blockly...',
       '📝 Configurando lógica de compra e reinício...',
-      '🔄 Validando IDs e variáveis...',
-      '✨ Finalizando o bot...',
+      '🔄 Validando IDs e variáveis...',      
     ];
     if (isLoading) {
       let idx = 0;
