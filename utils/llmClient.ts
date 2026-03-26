@@ -45,12 +45,12 @@ Blocos se encadeiam via campo "next":
 
 --- RUNONCEATSTART (Inicialização) ---
 Sequência típica (em next):
-1. text_print — nome do bot
-2. setmarket — define mercado inicial  
-3. setactive_continuousindices — ativa mercados para intermercados (se usar)
-4. setmoneymanagementtosmartmartingale OU setmoneymanagementtofixedstake — gestão de dinheiro
-5. setvirtuallose — virtual loss
-6. settarget — metas/stops automáticos
+1. text_print — nome do bot (opcional)
+2. settarget — metas/stops automáticos
+3. setmoneymanagementtosmartmartingale OU setmoneymanagementtofixedstake — gestão de dinheiro
+4. setvirtuallose — virtual loss
+5. setmarket — define mercado inicial
+6. setactive_continuousindices — ativa mercados para intermercados (se usar)
 7. setadditionalsettings — delays (opcional)
 8. variables_set — inicializa variáveis personalizadas
 9. readyfortrade — SEMPRE o último, sinaliza pronto para operar
@@ -95,12 +95,45 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 }}
 
 --- VIRTUAL LOSS ---
+// MODO SIMPLES (mais comum — opera em virtual N vezes antes de entrar em real):
 {"type":"setvirtuallose","id":"b_X",
-  "fields":{"check_virtuallose_nya":true},
+  "fields":{"check_virtuallose_nya":true,"virtuallose_tipo":"simples"},
   "inputs":{"virtuallose_nya":{"shadow":{"type":"math_number","id":"b_X2","fields":{"NUM":2}}}}
 }
 // check_virtuallose_nya: true=ligado, false=desligado
-// virtuallose_nya: número de perdas virtuais antes de operar de verdade
+// virtuallose_tipo: "simples" (usa virtuallose_nya como quantidade) | "avancado" (usa sub-bloco em virtuallose_config)
+
+// MODO AVANÇADO — adicione o sub-bloco desejado em virtuallose_config:
+
+// Intermediário: alterna entre virtual e real conforme losses (N virtuais, M reais)
+{"type":"setvirtuallose","id":"b_X",
+  "fields":{"check_virtuallose_nya":true,"virtuallose_tipo":"avancado"},
+  "inputs":{
+    "virtuallose_nya":{"shadow":{"type":"math_number","id":"b_X2","fields":{"NUM":2}}},
+    "virtuallose_config":{"block":{
+      "type":"setvirtuallose_intermediario","id":"b_X3",
+      "inputs":{
+        "intermediario_loss_virtual":{"shadow":{"type":"math_number","id":"b_X4","fields":{"NUM":3}}},
+        "intermediario_loss_real":{"shadow":{"type":"math_number","id":"b_X5","fields":{"NUM":1}}}
+      }
+    }}
+  }
+}
+
+// Virtual Win: entra em real após X wins virtuais consecutivos
+// "virtuallose_config":{"block":{"type":"setvirtuallose_win","id":"b_X3",
+//   "inputs":{"win_virtual_qtde":{"shadow":{"type":"math_number","id":"b_X4","fields":{"NUM":3}}}}}}
+
+// Padrão VW/VL: sequência personalizada (ex: "VL,VL,VW" = 2 virtuais depois 1 real)
+// "virtuallose_config":{"block":{"type":"setvirtuallose_padrao","id":"b_X3",
+//   "fields":{"padrao_sequencia":"VL,VL,VW"}}}
+
+// Progressivo: X losses virtuais → entra em real, volta ao virtual após Y wins reais consecutivos
+// "virtuallose_config":{"block":{"type":"setvirtuallose_progressivo","id":"b_X3",
+//   "inputs":{
+//     "progressivo_virtual_losses":{"shadow":{"type":"math_number","id":"b_X4","fields":{"NUM":3}}},
+//     "progressivo_real_wins":{"shadow":{"type":"math_number","id":"b_X5","fields":{"NUM":1}}}
+//   }}}
 
 --- SETTARGET (Metas automáticas) ---
 {"type":"settarget","id":"b_X",
@@ -128,7 +161,9 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 // Todos têm os campos base + inputs de stake e duration
 // account_nya: "master" (conta principal), "slave" (conta secundária), "auto"
 // market_nya: "activemarket" (usa mercado ativo), ou específico
-// stakeAM_nya: "auto" (usa AM automático), "manual" (usa stake_nya input)
+// stakeAM_nya: "auto" (stake gerenciado pelo AM — setmoneymanagement) | "manual" (stake fixo via stake_nya)
+// REGRA: use "auto" com setmoneymanagementtosmartmartingale ou setmoneymanagementtofixedstake
+//        use "manual" apenas quando VOCÊ gerencia o stake via variável (martingale manual)
 
 // DIGIT DIFFERS / MATCHES
 {"type":"purchase_diff_match","id":"b_X","fields":{
@@ -140,7 +175,9 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
     "ldp_nya":{"shadow":{"type":"math_number","id":"b_X3","fields":{"NUM":0}}}
   }
 }
-// ldp_nya = digit prediction 0-9 (ignorado em DIGITDIFF, usado em DIGITMATCH)
+// ldp_nya = digit prediction 0-9
+// DIGITDIFF: o último dígito deve SER DIFERENTE de ldp_nya (OBRIGATÓRIO, não ignorado!)
+// DIGITMATCH: o último dígito deve SER IGUAL a ldp_nya
 
 // DIGIT OVER / UNDER
 {"type":"purchase_over_under","id":"b_X","fields":{
@@ -244,6 +281,18 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
     "inpduration_nya":{"shadow":{"type":"math_number","id":"b_X2","fields":{"NUM":5}}}
   }
 }
+
+// HIGH-CLOSE / CLOSE-LOW / HIGH-LOW (duração em minutos, 1-30, fixo em "m")
+{"type":"purchase_highclose_closelow_highlow","id":"b_X","fields":{
+  "selcontract_nya":"LBFLOATPUT",  // LBFLOATPUT=High-Close, LBFLOATCALL=Close-Low, LBHIGHLOW=High-Low
+  "account_nya":"master","market_nya":"activemarket","stakeAM_nya":"manual"},
+  "inputs":{
+    "stake_nya":{"shadow":{"type":"math_number","id":"b_X1","fields":{"NUM":0.35}}},
+    "inpduration_nya":{"shadow":{"type":"math_number","id":"b_X2","fields":{"NUM":5}}},
+    "multiplier_nya":{"shadow":{"type":"math_number","id":"b_X3","fields":{"NUM":100}}}
+  }
+}
+// Duração em minutos (1-30). multiplier_nya: multiplicador do contrato.
 
 // HIGH TICK / LOW TICK (5 ticks fixo)
 {"type":"purchase_hightick_lowtick","id":"b_X","fields":{
@@ -374,12 +423,33 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
   }
 }
 
+// Número aleatório inteiro entre FROM e TO (inclusive)
+{"type":"math_random_int","id":"b_X",
+  "inputs":{
+    "FROM":{"shadow":{"type":"math_number","id":"b_X1","fields":{"NUM":0}}},
+    "TO":{"shadow":{"type":"math_number","id":"b_X2","fields":{"NUM":9}}}
+  }
+}
+// Exemplo de uso: previsão aleatória 0-9 para bots Digit
+// Em ldp_nya: {"block":{"type":"math_random_int","id":"b_X","inputs":{"FROM":{"shadow":...},"TO":{"shadow":...}}}}
+
 --- TEXTO ---
 {"type":"text","id":"b_X","fields":{"TEXT":"sua mensagem"}}
 
 // Concatenar textos
 {"type":"text_join","id":"b_X","extraState":{"itemCount":3},
   "inputs":{"ADD0":{"block":<a>},"ADD1":{"block":<b>},"ADD2":{"block":<c>}}}
+
+--- DEFINIR PAUSAS (delays entre operações) ---
+{"type":"setadditionalsettings","id":"b_X",
+  "fields":{"check_delayafterwin_nya":false,"check_delayafterlose_nya":false},
+  "inputs":{
+    "delayafterwin_nya":{"shadow":{"type":"math_number","id":"b_X2","fields":{"NUM":3}}},
+    "delayafterlose_nya":{"shadow":{"type":"math_number","id":"b_X3","fields":{"NUM":3}}}
+  }
+}
+// check_delayafterwin_nya: true = adicionar delay após ganho (em segundos)
+// check_delayafterlose_nya: true = adicionar delay após perda (em segundos)
 
 --- LOGS ---
 {"type":"write_log","id":"b_X","fields":{"color_nya":"ffbf00","sound_nya":"silent"},
@@ -435,8 +505,9 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 {"type":"lastcontractdetail","id":"b_X","fields":{"dropdown_lastcontractdetail_A":"profit"}}
 // Valores: "profit", "entryvalue", "exitvalue", "currency"
 
-// Resultado do último contrato (win ou loss)
-{"type":"resultis","id":"b_X","fields":{"result_nya":"win"}}  // "win" ou "loss"
+// Resultado do último contrato
+{"type":"resultis","id":"b_X","fields":{"result_nya":"win"}}
+// Valores: "win", "loss", "virtualwin" (win em conta virtual), "virtualloss" (loss em conta virtual)
 
 --- RESUMO GERAL ---
 {"type":"summary","id":"b_X","fields":{"data_nya":"totalprofitloss"}}
@@ -546,6 +617,7 @@ Variável "nivel" começa em 0. Se 0 → compra DIGITDIFF (stake base). Se 1 →
 }
 
 --- PADRÃO 6: RESTARTTRADINGCONDITIONS — Com resultis (win/loss) ---
+// ATENÇÃO: "next" SEMPRE fora de "inputs" — ao mesmo nível de "type", "id" e "inputs"
 "statement_restarttradingconditions": {
   "block": {
     "type":"controls_if","id":"b_rt1",
@@ -560,21 +632,14 @@ Variável "nivel" começa em 0. Se 0 → compra DIGITDIFF (stake base). Se 1 →
       "DO1":{"block":{
         "type":"math_change","id":"b_rt6","fields":{"VAR":{"id":"v_nivel"}},
         "inputs":{"DELTA":{"shadow":{"type":"math_number","id":"b_rt7","fields":{"NUM":1}}}}
-      }},
-      "next":{"block":{"type":"tradeagain","id":"b_rt8"}}
-    }
+      }}
+    },
+    "next":{"block":{"type":"tradeagain","id":"b_rt8"}}
   }
 }
-// ATENÇÃO: tradeagain deve vir NO "next" do controls_if, não dentro do DO
-
-Forma correta de colocar tradeagain APÓS o if:
-{
-  "type":"controls_if","id":"b_rt1",
-  ...
-  "next": {
-    "block": {"type":"tradeagain","id":"b_rt2"}
-  }
-}
+// REGRA CRÍTICA: "next" é propriedade do bloco (mesmo nível de "inputs"),
+// NUNCA dentro de "inputs". Exemplo correto:
+// {"type":"controls_if","id":"...", "inputs":{...}, "next":{"block":{...}}}
 
 --- PADRÃO 7: RESTARTTRADINGCONDITIONS — Com martingale manual ---
 "statement_restarttradingconditions": {
@@ -601,6 +666,47 @@ Forma correta de colocar tradeagain APÓS o if:
     "next":{"block":{"type":"tradeagain","id":"b_rtb"}}
   }
 }
+
+--- PADRÃO 8: PURCHASECONDITIONS — Contador de ticks (compra a cada N ticks) ---
+Usa variável contador para comprar somente a cada N ticks.
+Variável "contador" inicializada em 0 no runonceatstart via variables_set.
+A cada tick: incrementa o contador. Quando >= N → reseta e compra. Senão → checkagain.
+
+"statement_purchaseconditions": {
+  "block": {
+    "type":"math_change","id":"b_pc1",
+    "fields":{"VAR":{"id":"v_contador"}},
+    "inputs":{"DELTA":{"shadow":{"type":"math_number","id":"b_pc2","fields":{"NUM":1}}}},
+    "next":{"block":{
+      "type":"controls_if","id":"b_pc3",
+      "extraState":{"hasElse":true},
+      "inputs":{
+        "IF0":{"block":{"type":"logic_compare","id":"b_pc4","fields":{"OP":"GTE"},
+          "inputs":{
+            "A":{"block":{"type":"variables_get","id":"b_pc5","fields":{"VAR":{"id":"v_contador"}}}},
+            "B":{"block":{"type":"math_number","id":"b_pc6","fields":{"NUM":10}}}
+          }
+        }},
+        "DO0":{"block":{
+          "type":"variables_set","id":"b_pc7","fields":{"VAR":{"id":"v_contador"}},
+          "inputs":{"VALUE":{"block":{"type":"math_number","id":"b_pc8","fields":{"NUM":0}}}},
+          "next":{"block":{
+            "type":"purchase_diff_match","id":"b_pc9",
+            "fields":{"selcontract_nya":"DIGITDIFF","account_nya":"master","market_nya":"activemarket","stakeAM_nya":"auto"},
+            "inputs":{
+              "stake_nya":{"shadow":{"type":"math_number","id":"b_pca","fields":{"NUM":0.35}}},
+              "inpduration_nya":{"shadow":{"type":"math_number","id":"b_pcb","fields":{"NUM":1}}},
+              "ldp_nya":{"shadow":{"type":"math_number","id":"b_pcc","fields":{"NUM":0}}}
+            }
+          }}
+        }},
+        "ELSE":{"block":{"type":"checkagain","id":"b_pcd"}}
+      }
+    }}
+  }
+}
+// Declarar em variables: [{"name":"contador","id":"v_contador"}]
+// Inicializar em runonceatstart: variables_set contador = 0
 
 ================================================================================
 ESTRATÉGIAS COMUNS (como implementar)
@@ -639,7 +745,7 @@ REGRAS IMPORTANTES DE GERAÇÃO
 7. Ao usar AM automático (martingale/fixo): stakeAM_nya: "auto" e o stake_nya é ignorado
 8. NUNCA gere IDs duplicados no mesmo bot
 9. Variables array: liste TODAS as variáveis com name e id únicos
-10. Os valores de "shadow" são fallbacks — coloque o valor real em "block" dentro do input
+10. Os valores de "shadow" são fallbacks visuais — coloque o valor real em "block" dentro do input
 
 ================================================================================
 SIDEBAR CONFIG (já preenchida pelo usuário — NÃO pergunte sobre estes)
