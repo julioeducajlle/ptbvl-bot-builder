@@ -136,17 +136,22 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 //   }}}
 
 --- SETTARGET (Metas automáticas) ---
+// ⚠️ REGRA CRÍTICA — SHADOWS OBRIGATÓRIOS: Todos os 7 inputs com shadow DEVEM estar
+// presentes no JSON INDEPENDENTEMENTE de quais check_* estão true ou false.
+// NUNCA omita um shadow mesmo que o check correspondente seja false.
+// Omitir qualquer shadow causa erro fatal de execução ao carregar o bot na plataforma.
 {"type":"settarget","id":"b_X",
   "fields":{
-    "check_targetprofit_nya":true,     // para quando lucro total >= meta
-    "check_stoploss_nya":false,        // para quando perda total >= stop
-    "check_numberofwins_nya":false,    // para após N wins
-    "check_numberoflosses_nya":false,  // para após N losses
-    "check_numberofruns_nya":false,    // para após N operações
-    "check_numberofwinsinarow":false,  // para após N wins seguidos
-    "check_numberoflossesinarow_nya":false // para após N losses seguidos
+    "check_targetprofit_nya":true,              // true = para quando lucro total >= meta
+    "check_stoploss_nya":true,                  // true = para quando perda total >= stop
+    "check_numberofwins_nya":false,             // true = para após N wins totais
+    "check_numberoflosses_nya":false,           // true = para após N losses totais
+    "check_numberofruns_nya":false,             // true = para após N operações
+    "check_numberofwinsinarow":false,           // true = para após N wins consecutivos
+    "check_numberoflossesinarow_nya":false      // true = para após N losses consecutivos
   },
   "inputs":{
+    // TODOS os 7 shadows SEMPRE presentes, mesmo se o check for false:
     "targetprofit_nya":{"shadow":{"type":"math_number","id":"b_X1","fields":{"NUM":10}}},
     "stoploss_nya":{"shadow":{"type":"math_number","id":"b_X2","fields":{"NUM":100}}},
     "numberofwins_nya":{"shadow":{"type":"math_number","id":"b_X3","fields":{"NUM":10}}},
@@ -156,6 +161,8 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
     "numberoflossesinarow_nya":{"shadow":{"type":"math_number","id":"b_X7","fields":{"NUM":10}}}
   }
 }
+// Exemplo correto: apenas profit R$5 e stop R$50 habilitados → check_targetprofit_nya:true,
+// check_stoploss_nya:true, todos outros false — MAS os 7 shadows permanecem no JSON.
 
 --- BLOCOS DE COMPRA (purchase blocks) ---
 // Todos têm os campos base + inputs de stake e duration
@@ -441,6 +448,7 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
   "inputs":{"ADD0":{"block":<a>},"ADD1":{"block":<b>},"ADD2":{"block":<c>}}}
 
 --- DEFINIR PAUSAS (delays entre operações) ---
+// ⚠️ SHADOWS OBRIGATÓRIOS: ambos os shadows devem estar presentes mesmo que os checks sejam false.
 {"type":"setadditionalsettings","id":"b_X",
   "fields":{"check_delayafterwin_nya":false,"check_delayafterlose_nya":false},
   "inputs":{
@@ -450,6 +458,7 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 }
 // check_delayafterwin_nya: true = adicionar delay após ganho (em segundos)
 // check_delayafterlose_nya: true = adicionar delay após perda (em segundos)
+// NUNCA omita os shadows mesmo que check seja false — ambos sempre presentes no JSON.
 
 --- LOGS ---
 {"type":"write_log","id":"b_X","fields":{"color_nya":"ffbf00","sound_nya":"silent"},
@@ -745,7 +754,12 @@ REGRAS IMPORTANTES DE GERAÇÃO
 7. Ao usar AM automático (martingale/fixo): stakeAM_nya: "auto" e o stake_nya é ignorado
 8. NUNCA gere IDs duplicados no mesmo bot
 9. Variables array: liste TODAS as variáveis com name e id únicos
-10. Os valores de "shadow" são fallbacks — quando estipulado, coloque o valor real em "block" dentro do input, mas nunca remova os campos de "shadow" caso não tenham sido estipulados.
+10. Os valores de "shadow" são fallbacks visuais — coloque o valor real em "block" dentro do input
+11. ⚠️ SETTARGET — SHADOWS SEMPRE OBRIGATÓRIOS: O bloco settarget possui 7 inputs (targetprofit_nya,
+    stoploss_nya, numberofwins_nya, numberoflosses_nya, numberofruns_nya, numberofwinsinarow_nya,
+    numberoflossesinarow_nya). TODOS os 7 devem ter seu shadow block no JSON, mesmo que o check_*
+    correspondente seja false. JAMAIS omita qualquer shadow do settarget — isso causa erro fatal ao
+    carregar o bot. O check_* apenas habilita/desabilita a verificação; o shadow deve existir sempre.
 
 ================================================================================
 SIDEBAR CONFIG (já preenchida pelo usuário — NÃO pergunte sobre estes)
