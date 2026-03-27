@@ -20,10 +20,11 @@ Os bots são arquivos JSON com o formato:
   "variables": [ {"name": "nomeDaVar", "id": "ID_UNICO"} ]
 }
 
-ESTRUTURA OBRIGATÓRIA (3 root blocks, nesta ordem):
+ESTRUTURA OBRIGATÓRIA (3 root blocks obrigatórios + 1 opcional, nesta ordem):
 1. runonceatstart  — inicialização (roda uma vez ao iniciar)
 2. purchaseconditions  — lógica de quando comprar (roda a cada tick)
 3. restarttradingconditions  — pós-operação (roda após cada contrato fechar)
+Opcional: sellconditions  — lógica de venda antecipada (para Accumulators/Multipliers)
 Opcional: procedures_defnoreturn  — funções personalizadas
 
 IDs FIXOS OBRIGATÓRIOS (usados pela plataforma, não mudar):
@@ -93,6 +94,18 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 {"type":"setmoneymanagementtofixedstake","id":"b_X","inputs":{
   "fixedstake_nya":{"shadow":{"type":"math_number","id":"b_X2","fields":{"NUM":0.35}}}
 }}
+
+// Ciclo de Stake (stake segue uma lista de valores em ciclo)
+{
+  "type":"setmoneymanagementtosmartcyclestake","id":"b_X",
+  "fields":{"check_smart_nya":true},
+  "inputs":{
+    "cyclestake_nya":{"block":{"type":"text","id":"b_X2","fields":{"TEXT":"0.35,0.70,1.40"}}}
+  }
+}
+// check_smart_nya: true = volta ao stake inicial somente após cobrir a perda anterior
+// cyclestake_nya: string com valores de stake separados por vírgula (ex: "0.35,0.70,1.40")
+// O ciclo itera pelos valores a cada nova operação
 
 --- VIRTUAL LOSS ---
 // MODO SIMPLES (mais comum — opera em virtual N vezes antes de entrar em real):
@@ -270,8 +283,9 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 }
 
 // ASIAN UP / DOWN (duração fixa ticks 5-10)
-{"type":"purchase_asian","id":"b_X","fields":{
-  "selcontract_nya":"ASIANU",  // ou ASIAND
+// ⚠️ Nome correto: purchase_asianup_asiandown (NÃO "purchase_asian" — não existe!)
+{"type":"purchase_asianup_asiandown","id":"b_X","fields":{
+  "selcontract_nya":"ASIANU",  // ASIANU=Asian Up, ASIAND=Asian Down
   "account_nya":"master","market_nya":"activemarket","stakeAM_nya":"manual"},
   "inputs":{
     "stake_nya":{"shadow":{"type":"math_number","id":"b_X1","fields":{"NUM":0.35}}},
@@ -474,25 +488,41 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 // Último dígito do tick atual
 {"type":"lastdigit","id":"b_X"}
 
-// Últimos 10 dígitos — um dígito específico
+// Últimos 10 dígitos — um dígito específico (VALUE BLOCK)
 {"type":"thelast10digits","id":"b_X","fields":{
-  "dropdown_thelast10digits_A":"digit",
-  "dropdown_thelast10digits_B":"1"  // "1" a "10" (1=mais recente), ou "list"
+  "dropdown_thelast10digits_A":"digit",  // "digit"|"tickmove"|"change"|"digitmove"|"digitgraph"
+  "dropdown_thelast10digits_B":"1"       // "1" a "10" (1=mais recente), ou "list"
 }}
 
-// Lista dos últimos 1001 dígitos
-{"type":"1001lastdigitlist","id":"b_X"}
+// ⚠️ BLOCOS DE LISTA — REGRA CRÍTICA DE TIPO:
+// Todos os blocos abaixo são BLOCOS DE VALOR (output/value blocks), NÃO blocos de instrução.
+// NUNCA os coloque em uma cadeia "next" soltos — isso causa erro "missing previous connection".
+// SEMPRE use-os dentro de "inputs" de outro bloco (ex: inputs.LIST, inputs.VALUE).
+// Padrão correto: variáveis_set → lists_getSublist → <bloco_de_lista>
 
-// Para intermercados:
-{"type":"1001lastdigitlist_continuousindices","id":"b_X"}
+// --- LISTA DE DÍGITOS (últimos 1001 dígitos finais dos ticks) ---
+// Use APENAS para contratos de DÍGITO: Digit Differs, Digit Matches, Digit Over/Under, Even/Odd.
+// Retorna array com os últimos 1001 dígitos (valores inteiros 0-9).
+{"type":"1001lastdigitlist","id":"b_X"}                        // mercado único
+{"type":"1001lastdigitlist_continuousindices","id":"b_X"}      // intermercados
 
-// Sublista
+// --- LISTA DE TICKS (últimos 1001 valores de preço dos ticks) ---
+// Use para contratos de PREÇO: Rise/Fall, Higher/Lower, padrões de alta/baixa consecutivos.
+// Retorna array com os últimos 1001 preços reais do mercado (ponto flutuante).
+// ⚠️ REGRA: QUANDO O USUÁRIO PEDE ANÁLISE DE TICKS PARA RISE/FALL → USE ESTES.
+// NUNCA use 1001lastdigitlist para bots Rise/Fall — ele retorna dígitos, não preços!
+{"type":"1001tickslist","id":"b_X"}                            // mercado único
+{"type":"1001tickslist_continuousindices","id":"b_X"}          // intermercados
+
+// Sublista — exemplo: pegar os últimos 5 ticks de preço (para verificar padrão fall/rise)
+// Correto: usado dentro de inputs.VALUE de um variables_set
 {"type":"lists_getSublist","id":"b_X","fields":{"WHERE1":"FROM_END","WHERE2":"LAST"},
   "inputs":{
-    "LIST":{"block":<lista>},
-    "AT1":{"block":{"type":"math_number","id":"b_X2","fields":{"NUM":10}}}
+    "LIST":{"block":{"type":"1001tickslist_continuousindices","id":"b_X2"}},
+    "AT1":{"block":{"type":"math_number","id":"b_X3","fields":{"NUM":5}}}
   }
 }
+// Para dígitos, substitua 1001tickslist_continuousindices por 1001lastdigitlist_continuousindices
 
 // Posição na lista
 {"type":"lists_indexOf","id":"b_X","fields":{"END":"LAST"},
@@ -518,6 +548,11 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 {"type":"resultis","id":"b_X","fields":{"result_nya":"win"}}
 // Valores: "win", "loss", "virtualwin" (win em conta virtual), "virtualloss" (loss em conta virtual)
 
+--- SALDO E CONTA ---
+// Saldo da conta (VALUE BLOCK)
+{"type":"balance","id":"b_X","fields":{"tipe_nya":"number"}}
+// tipe_nya: "number" (retorna valor numérico) | "string" (retorna texto formatado)
+
 --- RESUMO GERAL ---
 {"type":"summary","id":"b_X","fields":{"data_nya":"totalprofitloss"}}
 // Valores: "totalprofitloss", "wins", "losses", "winsinarow", "lossesinarow", "numberofoperations"
@@ -532,14 +567,118 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 // Parar o bot
 {"type":"stopbot","id":"b_X"}
 
-// Mudar mercado
-{"type":"changemarket","id":"b_X","fields":{"market_nya":"R_25|Volatility 25 Index"}}
-
-// Mercado atual (intermercados)
+// Mercado atual (intermercados) — retorna número do slot ativo (1-10)
 {"type":"currentmarket_continuousindices","id":"b_X"}
 
-================================================================================
-PADRÕES REAIS EXTRAÍDOS DE 418 BOTS
+// Índice de um slot intermercado específico — retorna valor do mercado por slot
+{"type":"continuousindices","id":"b_X","fields":{
+  "dropdown_continuousindices_A":"1",  // "1" a "10" (slot do mercado)
+  "dropdown_continuousindices_B":"<campo>"  // ver opções abaixo
+}}
+// ⚠️ changemarket NÃO EXISTE como bloco. Para mudar mercado use setmarket no runonceatstart.
+
+--- DADOS DO TICK ATUAL ---
+// Último tick (valor de preço) — VALUE BLOCK, use dentro de inputs
+{"type":"lasttick","id":"b_X"}
+
+// Último tick como string — VALUE BLOCK
+{"type":"lasttickstring","id":"b_X"}
+
+// Últimos 10 ticks — um tick específico (VALUE BLOCK)
+{"type":"thelast10ticks","id":"b_X","fields":{
+  "dropdown_thelast10ticks_A":"tick",  // "tick"|"move"|"worm"|"sentiment"|"change"|"%"
+  "dropdown_thelast10ticks_B":"1"      // "1" a "10" (1=mais recente), ou "list"
+}}
+
+--- INDICADORES TÉCNICOS ---
+// Todos são VALUE BLOCKS. Aceitam uma lista de ticks (ex: 1001tickslist) e um período.
+// Usar com: inputs.inputlist_nya = lista de ticks, inputs.period_nya = período
+
+// RSI (valor único)
+{"type":"indicatorrsi","id":"b_X","inputs":{
+  "inputlist_nya":{"block":{"type":"1001tickslist","id":"b_X1"}},
+  "period_nya":{"block":{"type":"math_number","id":"b_X2","fields":{"NUM":14}}}
+}}
+
+// RSI Array (retorna array com todos os valores RSI)
+{"type":"indicatorrsiarray","id":"b_X","inputs":{
+  "inputlist_nya":{"block":{"type":"1001tickslist","id":"b_X1"}},
+  "period_nya":{"block":{"type":"math_number","id":"b_X2","fields":{"NUM":14}}}
+}}
+
+// SMA Array (Média Móvel Simples — retorna array)
+{"type":"indicatorsmaarray","id":"b_X","inputs":{
+  "inputlist_nya":{"block":{"type":"1001tickslist","id":"b_X1"}},
+  "period_nya":{"block":{"type":"math_number","id":"b_X2","fields":{"NUM":14}}}
+}}
+
+// Bollinger Bands (retorna array [upper, middle, lower])
+{"type":"indicatorbollingerbands","id":"b_X","inputs":{
+  "inputlist_nya":{"block":{"type":"1001tickslist","id":"b_X1"}},
+  "period_nya":{"block":{"type":"math_number","id":"b_X2","fields":{"NUM":20}}},
+  "stddev_nya":{"block":{"type":"math_number","id":"b_X3","fields":{"NUM":2}}}
+}}
+
+// ADX — Average Directional Index
+{"type":"indicatoradx","id":"b_X","inputs":{
+  "inputlist_nya":{"block":{"type":"1001tickslist","id":"b_X1"}},
+  "period_nya":{"block":{"type":"math_number","id":"b_X2","fields":{"NUM":14}}}
+}}
+
+// CCI — Commodity Channel Index
+{"type":"indicatorcci","id":"b_X","inputs":{
+  "inputlist_nya":{"block":{"type":"1001tickslist","id":"b_X1"}},
+  "period_nya":{"block":{"type":"math_number","id":"b_X2","fields":{"NUM":20}}}
+}}
+
+// Stochastic RSI
+{"type":"indicator_stochastic_rsi","id":"b_X",
+  "fields":{"return_value":"STOCHASTIC_RSI"},  // "STOCHASTIC_RSI"|"K"|"D"
+  "inputs":{
+    "inputlist_nya":{"block":{"type":"1001tickslist","id":"b_X1"}},
+    "rsi_period_nya":{"block":{"type":"math_number","id":"b_X2","fields":{"NUM":14}}},
+    "stoch_period_nya":{"block":{"type":"math_number","id":"b_X3","fields":{"NUM":14}}},
+    "k_Period":{"block":{"type":"math_number","id":"b_X4","fields":{"NUM":3}}},
+    "d_Period":{"block":{"type":"math_number","id":"b_X5","fields":{"NUM":3}}}
+  }
+}
+
+--- NOTIFICAÇÕES ---
+// Enviar mensagem pelo Telegram (bloco de instrução — pode ir em next)
+{"type":"notify_telegram","id":"b_X","inputs":{
+  "token_nya":{"block":{"type":"text","id":"b_X1","fields":{"TEXT":"SEU_TOKEN"}}},
+  "chatid_nya":{"block":{"type":"text","id":"b_X2","fields":{"TEXT":"SEU_CHAT_ID"}}},
+  "message_nya":{"block":{"type":"text","id":"b_X3","fields":{"TEXT":"Mensagem do bot"}}}
+}}
+
+--- EXECUÇÃO TEMPORAL ---
+// Executar bloco de instruções após N segundos
+{"type":"runafter","id":"b_X",
+  "inputs":{
+    "statement_nya":{"block":<bloco_de_instrucao>},
+    "seconds_nya":{"block":{"type":"math_number","id":"b_X1","fields":{"NUM":5}}}
+  }
+}
+
+--- VENDA ANTECIPADA (para contratos com sell disponível: Accumulators, Multipliers) ---
+// 4º root block opcional — define lógica de quando vender o contrato antes do vencimento
+// ID fixo: "sc_root" (sugerido; confirmar na plataforma se necessário)
+// Estrutura equivalente ao purchaseconditions, mas ativado quando sell está disponível
+// Blocos usados dentro de sellconditions:
+
+// Verificar se o contrato pode ser vendido antecipadamente (VALUE BLOCK)
+{"type":"sellisavailable","id":"b_X"}
+
+// Lucro/prejuízo atual do contrato aberto (VALUE BLOCK)
+{"type":"sellprofitloss","id":"b_X"}
+
+// Executar venda antecipada (instrução — vai em next ou DO de um if)
+{"type":"sellatmarket","id":"b_X"}
+
+// Exemplo de uso: vender se lucro >= R$0.50
+// sellconditions → controls_if → IF: sellprofitloss >= 0.5 → DO: sellatmarket
+
+
 ================================================================================
 
 --- PADRÃO 1: PURCHASECONDITIONS — Compra direta (sem condição) ---
@@ -717,6 +856,23 @@ A cada tick: incrementa o contador. Quando >= N → reseta e compra. Senão → 
 // Declarar em variables: [{"name":"contador","id":"v_contador"}]
 // Inicializar em runonceatstart: variables_set contador = 0
 
+--- PADRÃO 9: PURCHASECONDITIONS_CONTINUOUSINDICES — Análise de ticks (Rise/Fall) com flag de operação única ---
+// Verifica se os últimos 5 ticks são todos de queda (tick[N-1] > tick[N], decrescente).
+// Flag "emOperacao" impede nova compra enquanto um contrato está em andamento.
+// Lógica: pega sublista dos últimos 6 ticks, compara índices consecutivos via lists_getIndex.
+// ⚠️ Usa 1001tickslist_continuousindices (preços), NÃO 1001lastdigitlist_continuousindices (dígitos).
+
+// Estrutura de purchaseconditions_continuousindices:
+// 1. IF emOperacao = true → checkagain (impede segunda compra)
+// 2. Armazena sublista de 6 ticks em variável "ultTicks"
+// 3. Verifica 5 comparações: t[1]>t[2], t[2]>t[3], ..., t[5]>t[6] (FROM_END)
+// 4. Se todos verdadeiros → seta emOperacao=true, compra RISE
+// 5. Senão → checkagain
+
+// Em restarttradingconditions: reseta emOperacao = false antes do tradeagain.
+// Variáveis necessárias: "emOperacao" (inicializa false), "ultTicks" (lista)
+// Inicializar em runonceatstart: variables_set emOperacao = false
+
 ================================================================================
 ESTRATÉGIAS COMUNS (como implementar)
 ================================================================================
@@ -736,16 +892,39 @@ ESTRATÉGIAS COMUNS (como implementar)
    Se maioria abaixo de 5 → DIGITOVER 5. Se maioria acima de 5 → DIGITUNDER 4.
 
 5. INTERMERCADOS: Use purchaseconditions_continuousindices. O sistema itera pelos mercados
-   ativos automaticamente. Use 1001lastdigitlist_continuousindices para dados do mercado atual.
+   ativos automaticamente.
+   - Para análise de DÍGITOS (Digit Differs/Matches/Over/Under/Even/Odd) → 1001lastdigitlist_continuousindices
+   - Para análise de TICKS/PREÇO (Rise/Fall, padrões de alta/baixa) → 1001tickslist_continuousindices
+   NUNCA confunda os dois: dígitos = algarismos 0-9; ticks = preços reais do mercado.
+   Para flag de operação única: use variável booleana (ex: "emOperacao") inicializada como false.
+   Em purchaseconditions: só compra se emOperacao = false; ao comprar, seta emOperacao = true.
+   Em restarttradingconditions: reseta emOperacao = false antes do tradeagain.
 
 6. RECUPERAÇÃO COM CONTRATOS DIFERENTES: Nível 0=contrato normal, Nível 1=DIGITDIFF recuperação,
    Nível 2=DIGITUNDER 8 recuperação maior, etc. Usa variável "nivel" para rastrear.
+
+7. COM INDICADORES TÉCNICOS (RSI, SMA, Bollinger, etc.):
+   Em runonceatstart: inicialize variáveis de estado se necessário.
+   Em purchaseconditions: calcule o indicador passando 1001tickslist como inputlist_nya.
+   Salve o resultado em variável via variables_set, depois use em lógica de comparação.
+   Exemplo: RSI < 30 → comprar RISE; RSI > 70 → comprar FALL.
+
+8. FLAG DE OPERAÇÃO ÚNICA (evitar compras duplicadas):
+   Declare variável "emOperacao" (inicializa false em runonceatstart).
+   Em purchaseconditions: IF emOperacao = true → checkagain (não compra).
+   Ao executar a compra: adicione variables_set emOperacao = true ANTES do bloco de compra (via next).
+   Em restarttradingconditions: variables_set emOperacao = false → next → tradeagain.
+
+9. VENDA ANTECIPADA (Accumulators/Multipliers):
+   Adicione o 4º root block sellconditions.
+   Dentro: IF sellisavailable AND sellprofitloss >= meta → sellatmarket.
+   Exemplo de meta: 50% do stake → 0.35 * 0.5 = 0.175.
 
 ================================================================================
 REGRAS IMPORTANTES DE GERAÇÃO
 ================================================================================
 
-1. SEMPRE use os IDs fixos para os 4 root blocks (runonceatstart, purchaseconditions, etc.)
+1. SEMPRE use os IDs fixos para os root blocks obrigatórios (runonceatstart, purchaseconditions, etc.)
 2. TODOS os outros IDs devem ser únicos: b_001, b_002, ... e v_001, v_002, ... para variáveis
 3. SEMPRE termine runonceatstart com readyfortrade (ID fixo: "/S?3[Ux8c2wQ.UR3dBEo")
 4. SEMPRE termine restarttradingconditions com tradeagain (no next do último bloco)
@@ -760,6 +939,13 @@ REGRAS IMPORTANTES DE GERAÇÃO
     numberoflossesinarow_nya). TODOS os 7 devem ter seu shadow block no JSON, mesmo que o check_*
     correspondente seja false. JAMAIS omita qualquer shadow do settarget — isso causa erro fatal ao
     carregar o bot. O check_* apenas habilita/desabilita a verificação; o shadow deve existir sempre.
+12. ⚠️ NOME CORRETO: use "purchase_asianup_asiandown" — o nome "purchase_asian" NÃO existe.
+13. ⚠️ VALUE BLOCKS nunca em "next": 1001tickslist, 1001tickslist_continuousindices,
+    1001lastdigitlist, 1001lastdigitlist_continuousindices, lasttick, lasttickstring, balance,
+    indicatorrsi (e todos os indicadores), sellisavailable, sellprofitloss são VALUE BLOCKS.
+    Sempre aninhados dentro de "inputs", NUNCA soltos em cadeia "next".
+14. ⚠️ TICKS vs DÍGITOS: Rise/Fall analisa PREÇO → 1001tickslist. Digit bots analisam DÍGITO → 1001lastdigitlist.
+15. ⚠️ changemarket NÃO EXISTE como bloco. Troca de mercado só ocorre via setmarket no runonceatstart.
 
 ================================================================================
 SIDEBAR CONFIG (já preenchida pelo usuário — NÃO pergunte sobre estes)
@@ -905,7 +1091,8 @@ Para gerar o bot (JSON COMPLETO obrigatório), aqui está um EXEMPLO REAL COMPLE
 }
 
 REGRAS CRÍTICAS PARA GERAÇÃO:
-- SEMPRE inclua os 3 blocos raiz: runonceatstart, purchaseconditions, restarttradingconditions
+- SEMPRE inclua os 3 blocos raiz obrigatórios: runonceatstart, purchaseconditions, restarttradingconditions
+- Adicione sellconditions apenas para bots Accumulator/Multiplier com lógica de venda antecipada
 - NUNCA use "..." ou placeholders — escreva o JSON completo
 - runonceatstart DEVE conter: settarget → setmoneymanagement → setvirtuallose → setmarket → readyfortrade (nessa ordem via "next")
 - settarget DEVE ter pelo menos check_targetprofit_nya:true ou check_stoploss_nya:true
@@ -913,6 +1100,10 @@ REGRAS CRÍTICAS PARA GERAÇÃO:
 - restarttradingconditions DEVE terminar com tradeagain (ou ter tradeagain no "next" do último if)
 - Para martingale MANUAL: adicione variables_set na runonceatstart (inicializar v_stake, v_fator) e use stakeAM_nya:"manual"
 - Para bot INTERMERCADOS: substitua purchaseconditions por purchaseconditions_continuousindices e adicione setactive_continuousindices na runonceatstart antes do setmarket
+- ⚠️ NOME CORRETO DO ASIAN: use "purchase_asianup_asiandown" — NUNCA "purchase_asian" (não existe)
+- ⚠️ VALUE BLOCKS NUNCA EM "next": 1001tickslist, 1001lastdigitlist (e suas variantes), lasttick, balance, indicatorrsi e todos os indicadores, sellisavailable, sellprofitloss são VALUE BLOCKS — sempre dentro de "inputs", NUNCA soltos em cadeia "next"
+- ⚠️ TICKS vs DÍGITOS: Rise/Fall → 1001tickslist / 1001tickslist_continuousindices. Digit bots → 1001lastdigitlist / 1001lastdigitlist_continuousindices. NUNCA trocar os dois
+- ⚠️ changemarket NÃO EXISTE: não gere esse bloco. Para mudar mercado use setmarket no runonceatstart
 
 Use os valores da sidebar (fornecidos no contexto) para stake, duração, mercados, settarget, etc.\`;`
 
