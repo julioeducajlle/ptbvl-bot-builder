@@ -48,12 +48,12 @@ Blocos se encadeiam via campo "next":
 Sequência típica (em next):
 1. text_print — nome do bot (opcional)
 2. settarget — metas/stops automáticos
-3. setmoneymanagementtosmartmartingale OU setmoneymanagementtofixedstake — gestão de dinheiro
+3. setmoneymanagementtosmartmartingale OU setmoneymanagementtofixedstake OU setmoneymanagementtosmartcyclestake — gestão de dinheiro
 4. setvirtuallose — virtual loss
-5. setmarket — define mercado inicial
-6. setactive_continuousindices — ativa mercados para intermercados (se usar)
+5. setmarket — define mercado (OBRIGATÓRIO para mercado único; OPCIONAL para intermercados)
+6. setactive_continuousindices — ativa mercados para intermercados (substitui/complementa setmarket)
 7. setadditionalsettings — delays (opcional)
-8. variables_set — inicializa variáveis personalizadas
+8. variables_set — inicializa variáveis personalizadas (quantas forem necessárias, em cadeia next)
 9. readyfortrade — SEMPRE o último, sinaliza pronto para operar
 
 --- BLOCOS DE MERCADO ---
@@ -570,11 +570,13 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 // Mercado atual (intermercados) — retorna número do slot ativo (1-10)
 {"type":"currentmarket_continuousindices","id":"b_X"}
 
-// Índice de um slot intermercado específico — retorna valor do mercado por slot
+// Dados de um slot intermercado específico (VALUE BLOCK)
 {"type":"continuousindices","id":"b_X","fields":{
-  "dropdown_continuousindices_A":"1",  // "1" a "10" (slot do mercado)
-  "dropdown_continuousindices_B":"<campo>"  // ver opções abaixo
+  "dropdown_continuousindices_A":"1",      // "1" a "10" (número do slot)
+  "dropdown_continuousindices_B":"ticks"   // "ticks" | "digits" | "symbol"
 }}
+// dropdown_continuousindices_B: "ticks" = lista 1001 ticks do slot, "digits" = lista 1001 dígitos,
+//                                "symbol" = nome do símbolo (string)
 // ⚠️ changemarket NÃO EXISTE como bloco. Para mudar mercado use setmarket no runonceatstart.
 
 --- DADOS DO TICK ATUAL ---
@@ -584,10 +586,64 @@ Quando usar intermercados, use purchaseconditions_continuousindices em vez de pu
 // Último tick como string — VALUE BLOCK
 {"type":"lasttickstring","id":"b_X"}
 
-// Últimos 10 ticks — um tick específico (VALUE BLOCK)
+// Lista de strings dos últimos 1001 ticks — VALUE BLOCK
+{"type":"1001ticksstringlist","id":"b_X"}
+
+// Últimos 10 ticks — um tick específico ou lista (VALUE BLOCK)
 {"type":"thelast10ticks","id":"b_X","fields":{
   "dropdown_thelast10ticks_A":"tick",  // "tick"|"move"|"worm"|"sentiment"|"change"|"%"
   "dropdown_thelast10ticks_B":"1"      // "1" a "10" (1=mais recente), ou "list"
+}}
+
+// Data e hora atual — VALUE BLOCK
+{"type":"datetime","id":"b_X","fields":{
+  "dropdown_datetime":"hours"
+  // "year"|"month"|"date"|"hours"|"minutes"|"seconds"|"timezone"|"secondssinceepoch"
+}}
+
+--- BLOCOS ESTATÍSTICOS PRÉ-CALCULADOS ---
+// Estes blocos oferecem estatísticas calculadas automaticamente pela plataforma,
+// sem precisar manipular listas manualmente. VALUE BLOCKS.
+// Todos têm pares: um bloco de LEITURA e um bloco de CONFIGURAÇÃO (statement, vai em next).
+
+// Rise VS Fall (% de rises e falls nos últimos N ticks)
+// Configuração (statement — use em runonceatstart ou purchaseconditions antes de ler):
+{"type":"risevsfallsetnoofticks","id":"b_X","fields":{"row_nya":"1"},
+  "inputs":{"ticks_nya":{"block":{"type":"math_number","id":"b_X1","fields":{"NUM":100}}}}}
+// row_nya: "1" a "6" (até 6 linhas independentes de configuração)
+// Leitura (VALUE BLOCK):
+{"type":"risevsfall","id":"b_X","fields":{
+  "dropdown_risevsfall_A":"1",      // "1" a "6" (número da linha)
+  "dropdown_risevsfall_B":"rise"    // "rise" | "fall"
+}}
+
+// Even VS Odd (% de pares e ímpares)
+{"type":"evenvsoddsetnoofticks","id":"b_X","fields":{"row_nya":"1"},
+  "inputs":{"ticks_nya":{"block":{"type":"math_number","id":"b_X1","fields":{"NUM":100}}}}}
+{"type":"evenvsodd","id":"b_X","fields":{
+  "dropdown_evenvsodd_A":"1",       // "1" a "6"
+  "dropdown_evenvsodd_B":"even"     // "even" | "odd"
+}}
+
+// Over VS Under (% de dígitos acima/abaixo de um valor — 2 linhas)
+{"type":"overvsundersetnoofticks","id":"b_X","fields":{"row_nya":"1"},
+  "inputs":{"ticks_nya":{"block":{"type":"math_number","id":"b_X1","fields":{"NUM":100}}}}}
+{"type":"overvsundersetdigit","id":"b_X","fields":{"row_nya":"1","type_nya":"over"},
+  "inputs":{"digit_nya":{"block":{"type":"math_number","id":"b_X1","fields":{"NUM":5}}}}}
+// row_nya: "1" ou "2" (apenas 2 linhas disponíveis para Over VS Under)
+// type_nya: "over" | "under"
+{"type":"overvsunder","id":"b_X","fields":{
+  "dropdown_overvsunder_A":"1",     // "1" ou "2"
+  "dropdown_overvsunder_B":"over"   // "over" | "under"
+}}
+
+// Digit Statistic (frequência de cada dígito — até 6 linhas)
+{"type":"digitstatisticsetnoofticks","id":"b_X","fields":{"row_nya":"1"},
+  "inputs":{"ticks_nya":{"block":{"type":"math_number","id":"b_X1","fields":{"NUM":500}}}}}
+{"type":"digitstatistic","id":"b_X","fields":{
+  "dropdown_digitstatistic_A":"1",    // "1" a "6" ou "summ" (summary geral)
+  "dropdown_digitstatistic_B":"5"     // "0" a "9" (dígito), "least" (menos frequente),
+                                      // "most" (mais frequente), "list" (array completo)
 }}
 
 --- INDICADORES TÉCNICOS ---
@@ -856,22 +912,154 @@ A cada tick: incrementa o contador. Quando >= N → reseta e compra. Senão → 
 // Declarar em variables: [{"name":"contador","id":"v_contador"}]
 // Inicializar em runonceatstart: variables_set contador = 0
 
---- PADRÃO 9: PURCHASECONDITIONS_CONTINUOUSINDICES — Análise de ticks (Rise/Fall) com flag de operação única ---
-// Verifica se os últimos 5 ticks são todos de queda (tick[N-1] > tick[N], decrescente).
-// Flag "emOperacao" impede nova compra enquanto um contrato está em andamento.
-// Lógica: pega sublista dos últimos 6 ticks, compara índices consecutivos via lists_getIndex.
-// ⚠️ Usa 1001tickslist_continuousindices (preços), NÃO 1001lastdigitlist_continuousindices (dígitos).
+--- PADRÃO 9: PURCHASECONDITIONS_CONTINUOUSINDICES — Análise de ticks consecutivos (Rise/Fall) com flag ---
+// Verifica os últimos 5 ticks: se todos em queda (t1>t2>t3>t4>t5>t6 do mais antigo ao mais novo)
+// compra RISE. Flag "emOperacao" garante somente 1 operação por vez.
+// ⚠️ Usa 1001tickslist_continuousindices (preços), NÃO 1001lastdigitlist_continuousindices.
+// ⚠️ A lista é salva em variável PRIMEIRO — blocos de lista são VALUE BLOCKS, NUNCA em "next".
+// ⚠️ Usa controls_if aninhados (um por comparação) — Blockly não suporta AND em lógica de lista.
 
-// Estrutura de purchaseconditions_continuousindices:
-// 1. IF emOperacao = true → checkagain (impede segunda compra)
-// 2. Armazena sublista de 6 ticks em variável "ultTicks"
-// 3. Verifica 5 comparações: t[1]>t[2], t[2]>t[3], ..., t[5]>t[6] (FROM_END)
-// 4. Se todos verdadeiros → seta emOperacao=true, compra RISE
-// 5. Senão → checkagain
+// Variáveis: "emOperacao" (bool, init false), "ticks" (lista, init 0)
+// runonceatstart: variables_set emOperacao = false (via logic_boolean FALSE)
 
-// Em restarttradingconditions: reseta emOperacao = false antes do tradeagain.
-// Variáveis necessárias: "emOperacao" (inicializa false), "ultTicks" (lista)
-// Inicializar em runonceatstart: variables_set emOperacao = false
+"statement_purchaseconditions": {
+  "block": {
+    "type":"controls_if","id":"b_pc1",
+    "extraState":{"hasElse":true},
+    "inputs":{
+      "IF0":{"block":{"type":"logic_compare","id":"b_pc2","fields":{"OP":"EQ"},
+        "inputs":{
+          "A":{"block":{"type":"variables_get","id":"b_pc3","fields":{"VAR":{"id":"v_emOp"}}}},
+          "B":{"block":{"type":"logic_boolean","id":"b_pc4","fields":{"BOOL":"TRUE"}}}
+        }
+      }},
+      "DO0":{"block":{"type":"checkagain","id":"b_pc5"}},
+      "ELSE":{"block":{
+        "type":"variables_set","id":"b_pc6","fields":{"VAR":{"id":"v_ticks"}},
+        "inputs":{"VALUE":{"block":{
+          "type":"lists_getSublist","id":"b_pc7",
+          "fields":{"WHERE1":"FROM_END","WHERE2":"LAST"},
+          "inputs":{
+            "LIST":{"block":{"type":"1001tickslist_continuousindices","id":"b_pc8"}},
+            "AT1":{"block":{"type":"math_number","id":"b_pc9","fields":{"NUM":6}}}
+          }
+        }}},
+        "next":{"block":{
+          "type":"controls_if","id":"b_pca",
+          "extraState":{"hasElse":true},
+          "inputs":{
+            "IF0":{"block":{"type":"logic_compare","id":"b_pcb","fields":{"OP":"GT"},
+              "inputs":{
+                "A":{"block":{"type":"lists_getIndex","id":"b_pcc",
+                  "fields":{"MODE":"GET","WHERE":"FROM_END"},
+                  "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pcd","fields":{"VAR":{"id":"v_ticks"}}}},
+                    "AT":{"block":{"type":"math_number","id":"b_pce","fields":{"NUM":6}}}}}},
+                "B":{"block":{"type":"lists_getIndex","id":"b_pcf",
+                  "fields":{"MODE":"GET","WHERE":"FROM_END"},
+                  "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pcg","fields":{"VAR":{"id":"v_ticks"}}}},
+                    "AT":{"block":{"type":"math_number","id":"b_pch","fields":{"NUM":5}}}}}}
+              }
+            }},
+            "DO0":{"block":{
+              "type":"controls_if","id":"b_pci",
+              "extraState":{"hasElse":true},
+              "inputs":{
+                "IF0":{"block":{"type":"logic_compare","id":"b_pcj","fields":{"OP":"GT"},
+                  "inputs":{
+                    "A":{"block":{"type":"lists_getIndex","id":"b_pck","fields":{"MODE":"GET","WHERE":"FROM_END"},
+                      "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pcl","fields":{"VAR":{"id":"v_ticks"}}}},
+                        "AT":{"block":{"type":"math_number","id":"b_pcm","fields":{"NUM":5}}}}}},
+                    "B":{"block":{"type":"lists_getIndex","id":"b_pcn","fields":{"MODE":"GET","WHERE":"FROM_END"},
+                      "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pco","fields":{"VAR":{"id":"v_ticks"}}}},
+                        "AT":{"block":{"type":"math_number","id":"b_pcp","fields":{"NUM":4}}}}}}
+                  }
+                }},
+                "DO0":{"block":{
+                  "type":"controls_if","id":"b_pcq",
+                  "extraState":{"hasElse":true},
+                  "inputs":{
+                    "IF0":{"block":{"type":"logic_compare","id":"b_pcr","fields":{"OP":"GT"},
+                      "inputs":{
+                        "A":{"block":{"type":"lists_getIndex","id":"b_pcs","fields":{"MODE":"GET","WHERE":"FROM_END"},
+                          "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pct","fields":{"VAR":{"id":"v_ticks"}}}},
+                            "AT":{"block":{"type":"math_number","id":"b_pcu","fields":{"NUM":4}}}}}},
+                        "B":{"block":{"type":"lists_getIndex","id":"b_pcv","fields":{"MODE":"GET","WHERE":"FROM_END"},
+                          "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pcw","fields":{"VAR":{"id":"v_ticks"}}}},
+                            "AT":{"block":{"type":"math_number","id":"b_pcx","fields":{"NUM":3}}}}}}
+                      }
+                    }},
+                    "DO0":{"block":{
+                      "type":"controls_if","id":"b_pcy",
+                      "extraState":{"hasElse":true},
+                      "inputs":{
+                        "IF0":{"block":{"type":"logic_compare","id":"b_pcz","fields":{"OP":"GT"},
+                          "inputs":{
+                            "A":{"block":{"type":"lists_getIndex","id":"b_pd1","fields":{"MODE":"GET","WHERE":"FROM_END"},
+                              "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pd2","fields":{"VAR":{"id":"v_ticks"}}}},
+                                "AT":{"block":{"type":"math_number","id":"b_pd3","fields":{"NUM":3}}}}}},
+                            "B":{"block":{"type":"lists_getIndex","id":"b_pd4","fields":{"MODE":"GET","WHERE":"FROM_END"},
+                              "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pd5","fields":{"VAR":{"id":"v_ticks"}}}},
+                                "AT":{"block":{"type":"math_number","id":"b_pd6","fields":{"NUM":2}}}}}}
+                          }
+                        }},
+                        "DO0":{"block":{
+                          "type":"controls_if","id":"b_pd7",
+                          "extraState":{"hasElse":true},
+                          "inputs":{
+                            "IF0":{"block":{"type":"logic_compare","id":"b_pd8","fields":{"OP":"GT"},
+                              "inputs":{
+                                "A":{"block":{"type":"lists_getIndex","id":"b_pd9","fields":{"MODE":"GET","WHERE":"FROM_END"},
+                                  "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pda","fields":{"VAR":{"id":"v_ticks"}}}},
+                                    "AT":{"block":{"type":"math_number","id":"b_pdb","fields":{"NUM":2}}}}}},
+                                "B":{"block":{"type":"lists_getIndex","id":"b_pdc","fields":{"MODE":"GET","WHERE":"FROM_END"},
+                                  "inputs":{"VALUE":{"block":{"type":"variables_get","id":"b_pdd","fields":{"VAR":{"id":"v_ticks"}}}},
+                                    "AT":{"block":{"type":"math_number","id":"b_pde","fields":{"NUM":1}}}}}}
+                              }
+                            }},
+                            "DO0":{"block":{
+                              "type":"variables_set","id":"b_pdf","fields":{"VAR":{"id":"v_emOp"}},
+                              "inputs":{"VALUE":{"block":{"type":"logic_boolean","id":"b_pdg","fields":{"BOOL":"TRUE"}}}},
+                              "next":{"block":{
+                                "type":"purchase_rise_fall","id":"b_pdh",
+                                "fields":{"selcontract_nya":"CALL","account_nya":"master",
+                                  "market_nya":"activemarket","stakeAM_nya":"auto",
+                                  "seldurationunit_nya":"t"},
+                                "inputs":{
+                                  "stake_nya":{"shadow":{"type":"math_number","id":"b_pdi","fields":{"NUM":0.35}}},
+                                  "inpduration_nya":{"shadow":{"type":"math_number","id":"b_pdj","fields":{"NUM":5}}}
+                                }
+                              }}
+                            }},
+                            "ELSE":{"block":{"type":"checkagain","id":"b_pdk"}}
+                          }
+                        }},
+                        "ELSE":{"block":{"type":"checkagain","id":"b_pdl"}}
+                      }
+                    }},
+                    "ELSE":{"block":{"type":"checkagain","id":"b_pdm"}}
+                  }
+                }},
+                "ELSE":{"block":{"type":"checkagain","id":"b_pdn"}}
+              }
+            }},
+            "ELSE":{"block":{"type":"checkagain","id":"b_pdo"}}
+          }
+        }}
+      }}
+    }
+  }
+}
+
+// restarttradingconditions para este padrão:
+"statement_restarttradingconditions": {
+  "block": {
+    "type":"variables_set","id":"b_rt1","fields":{"VAR":{"id":"v_emOp"}},
+    "inputs":{"VALUE":{"block":{"type":"logic_boolean","id":"b_rt2","fields":{"BOOL":"FALSE"}}}},
+    "next":{"block":{"type":"tradeagain","id":"b_rt3"}}
+  }
+}
+// Variáveis: [{"name":"emOperacao","id":"v_emOp"},{"name":"ticks","id":"v_ticks"}]
+// Inicializar em runonceatstart: variables_set emOperacao = false (logic_boolean FALSE)
 
 ================================================================================
 ESTRATÉGIAS COMUNS (como implementar)
@@ -1094,7 +1282,9 @@ REGRAS CRÍTICAS PARA GERAÇÃO:
 - SEMPRE inclua os 3 blocos raiz obrigatórios: runonceatstart, purchaseconditions, restarttradingconditions
 - Adicione sellconditions apenas para bots Accumulator/Multiplier com lógica de venda antecipada
 - NUNCA use "..." ou placeholders — escreva o JSON completo
-- runonceatstart DEVE conter: settarget → setmoneymanagement → setvirtuallose → setmarket → readyfortrade (nessa ordem via "next")
+- runonceatstart DEVE conter: settarget → setmoneymanagement → setvirtuallose → [setmarket OU setactive_continuousindices] → readyfortrade (nessa ordem via "next")
+  - Use setmarket para bots de mercado único
+  - Use setactive_continuousindices (sem setmarket) para bots intermercados — o setmarket é OPCIONAL para intermercados
 - settarget DEVE ter pelo menos check_targetprofit_nya:true ou check_stoploss_nya:true
 - purchaseconditions DEVE conter o bloco de compra correto para o contrato
 - restarttradingconditions DEVE terminar com tradeagain (ou ter tradeagain no "next" do último if)
